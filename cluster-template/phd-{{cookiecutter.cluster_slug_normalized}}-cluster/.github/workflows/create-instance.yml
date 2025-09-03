@@ -1,0 +1,45 @@
+name: Create Instance
+run-name: Create '{% raw %}${{ inputs.INSTANCE_NAME }}{% endraw %}' on '{% raw %}${{ inputs.EDX_PLATFORM_VERSION }}{% endraw %}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      INSTANCE_NAME:
+        description: "Instance to create"
+        type: string
+      PLATFORM_NAME:
+        description: "Platform name"
+        default: "My Open edX Instance"
+        type: string
+      INSTANCE_TEMPLATE_REPOSITORY:
+        description: "Repository containing the instance template"
+        default: "https://github.com/open-craft/phd-cluster-template.git"
+        type: string
+      EDX_PLATFORM_REPOSITORY:
+        description: "Repository to clone the edx-platform from"
+        default: "https://github.com/openedx/edx-platform.git"
+        type: string
+      EDX_PLATFORM_VERSION:
+        description: "Version of the edx-platform to use"
+        default: "release/teak"
+        type: string
+      TUTOR_VERSION:
+        description: "Version of the tutor to use"
+        default: "v20.0.1"
+        type: string
+
+jobs:
+  create-instance:
+    permissions:
+      contents: write
+    name: Create Instance
+    uses: open-craft/phd-cluster-template/.github/workflows/create-instance.yml@main
+    secrets:
+      KUBECONFIG_CONTENT: "{% raw %}${{ secrets.KUBECONFIG_CONTENT }}{% endraw %}"
+    with:
+      INSTANCE_NAME: "{% raw %}${{ inputs.INSTANCE_NAME }}{% endraw %}"
+      PLATFORM_NAME: "{% raw %}${{ inputs.PLATFORM_NAME }}{% endraw %}"
+      INSTANCE_TEMPLATE_REPOSITORY: "{% raw %}${{ inputs.INSTANCE_TEMPLATE_REPOSITORY }}{% endraw %}"
+      EDX_PLATFORM_REPOSITORY: "{% raw %}${{ inputs.EDX_PLATFORM_REPOSITORY }}{% endraw %}"
+      EDX_PLATFORM_VERSION: "{% raw %}${{ inputs.EDX_PLATFORM_VERSION }}{% endraw %}"
+      TUTOR_VERSION: "{% raw %}${{ inputs.TUTOR_VERSION }}{% endraw %}"

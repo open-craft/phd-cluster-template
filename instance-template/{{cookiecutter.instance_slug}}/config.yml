@@ -1,0 +1,88 @@
+# This configuration will be updated by Picasso, therefore the formatting will
+# be completely lost. Therefore, spending time on formatting is not worth it.
+
+# Docker configuration
+MFE_DOCKER_IMAGE:
+DOCKER_IMAGE_OPENEDX:
+DOCKER_IMAGE_OPENEDX_DEV:
+DOCKER_REGISTRY: "{{ cookiecutter.docker_registry }}"
+DRYDOCK_INIT_JOBS: true
+DRYDOCK_REGISTRY_CREDENTIALS: |
+  {
+    "auths": {
+      "{{ cookiecutter.docker_registry }}":
+        { "auth": "{{ cookiecutter.docker_registry_credentials }}" }
+      }
+    }
+  }
+
+# Tutor configuration
+K8S_NAMESPACE: "{{ cookiecutter.instance_slug }}"
+TUTOR_APP_NAME: "{{ cookiecutter.instance_slug }}"
+TUTOR_VERSION: "{{ cookiecutter.tutor_version }}"
+
+# Open edX configuration
+PLATFORM_NAME: "{{ cookiecutter.platform_description }}"
+EDX_PLATFORM_REPOSITORY: "{{ cookiecutter.platform_repository }}"
+EDX_PLATFORM_VERSION: "{{ cookiecutter.platform_version }}"
+OPENEDX_EXTRA_PIP_REQUIREMENTS:
+  - git+https://github.com/eduNEXT/eox-tenant@v14.0.0
+  - cssselect==1.2.0
+  - h5p-xblock==0.2.17
+  - openedx-scorm-xblock==19.0.2
+  - xblock-free-text-response==4.1.0
+  - xblock-submit-and-compare==3.1.0
+  - xblock-image-explorer==3.0.2
+  - edx-sga==0.26.0
+
+# Ingress and HTTP configuration
+ENABLE_HTTPS: true
+ENABLE_WEB_PROXY: false
+LMS_HOST: "{{ cookiecutter.instance_domain }}"
+CMS_HOST: studio.{{ cookiecutter.instance_domain }}"
+PREVIEW_LMS_HOST: preview.{{ cookiecutter.instance_domain }}"
+
+# MySQL configuration
+RUN_MYSQL: false
+MYSQL_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
+MYSQL_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
+MYSQL_PASSWORD: "{{ generate_password() }}"
+MYSQL_HOST: "{{ env('PHD_MYSQL_HOST') | default('mysql') }}"
+MYSQL_PORT: "{{ env('PHD_MYSQL_PORT') | default('3306') }}"
+
+# MongoDB configuration
+RUN_MONGODB: false
+MONGODB_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
+MONGODB_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
+MONGODB_PASSWORD: "{{ generate_password() }}"
+MONGODB_HOST: "{{ env('PHD_MONGODB_HOST') | default('mongodb') }}"
+MONGODB_PORT: "{{ env('PHD_MONGODB_PORT') | default('27017') }}"
+
+# Storage configuration
+STORAGE_BUCKET_NAME: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"
+STORAGE_TYPE: "{{ env('PHD_STORAGE_TYPE') }}"
+STORAGE_REGION: "{{ env('PHD_STORAGE_REGION') }}"
+STORAGE_ENDPOINT_URL: "{{ storage_endpoint_url(env('PHD_STORAGE_TYPE'), env('PHD_STORAGE_REGION')) }}"
+
+# Picasso configuration
+PICASSO_EXTRA_COMMANDS:
+  - pip install tutor-contrib-drydock
+  - tutor plugins index add https://raw.githubusercontent.com/eduNEXT/tutor-plugin-indexes/teak/
+  - tutor plugins install forum mfe mfe-extensions sentry
+  - tutor plugins enable drydock forum mfe mfe-extensions sentry
+  - tutor picasso enable-themes
+  - tutor picasso enable-private-packages
+  - tutor config save
+
+PICASSO_THEMES:
+  - name: ednx-saas-themes
+    repo: git@github.com:eduNEXT/ednx-saas-themes.git
+    version: edunext/teak.master
+
+PICASSO_THEMES_NAME:
+  - bragi
+  - css-runtime
+
+PICASSO_THEME_DIRS:
+  - /openedx/themes/ednx-saas-themes/edx-platform
+  - /openedx/themes/ednx-saas-themes/edx-platform/bragi-children

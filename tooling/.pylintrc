@@ -1,0 +1,57 @@
+[MAIN]
+# Exclude patterns for files or directories
+ignore=
+
+    __pycache__,
+    .git,
+    .pytest_cache,
+    .venv,
+    *.egg-info,
+    build,
+    dist,
+    tests
+
+# Use multiple processes to speed up Pylint
+jobs=0
+
+# Pickle collected data for later comparisons
+persistent=yes
+
+[MESSAGES CONTROL]
+# Disable specific warnings that are too strict or not relevant
+disable=
+    C0301,  # line-too-long (handled by black)
+    C0411,  # wrong-import-order (handled by isort)
+    C0412,  # wrong-import-order (handled by isort)
+    C0413,  # wrong-import-order (handled by isort)
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=88  # should match black
+
+# Allow the body of an if to be on the same line
+single-line-if-stmt=no
+
+[BASIC]
+# Good variable names which should always be accepted
+good-names=i,j,k,ex,Run,_,e,logger,url
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of attributes for a class
+max-attributes=10
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=10
+
+[TYPECHECK]
+# List of members which are set dynamically and missed by pylint inference
+generated-members=
+
+[IMPORTS]
+# Allow wildcard imports from modules that define __all__
+allow-wildcard-with-all=no
+
