@@ -1,0 +1,144 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: storage-provision-template
+spec:
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for deployment"
+      - name: bucket-name
+        description: "Name of the bucket to create"
+      - name: storage-type
+        description: "Type of storage (s3 or spaces)"
+        value: "spaces"
+      - name: region
+        description: "Storage region"
+        value: "nyc3"
+      - name: access-key-id
+        description: "Access key ID for the storage service"
+      - name: secret-access-key
+        description: "Secret access key for the storage service"
+      - name: endpoint-url
+        description: "Endpoint URL for the storage service (leave empty for AWS S3)"
+        value: "https://nyc3.digitaloceanspaces.com"
+      - name: make-public
+        description: "Whether to make the bucket public (true/false)"
+        value: "false"
+
+  templates:
+    - name: main
+      steps:
+        - - name: create-bucket
+            template: create-bucket
+        - - name: configure-bucket
+            template: configure-bucket
+
+    - name: create-bucket
+      script:
+        image: amazon/aws-cli:2.11.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+          
+          export AWS_ACCESS_KEY_ID="{{workflow.parameters.access-key-id}}"
+          export AWS_SECRET_ACCESS_KEY="{{workflow.parameters.secret-access-key}}"
+          export AWS_DEFAULT_REGION="{{workflow.parameters.region}}"
+          
+          BUCKET_NAME="{{workflow.parameters.bucket-name}}"
+          STORAGE_TYPE="{{workflow.parameters.storage-type}}"
+          ENDPOINT_URL="{{workflow.parameters.endpoint-url}}"
+          
+          echo "Creating bucket: $BUCKET_NAME"
+          
+          # Check if bucket exists
+          if [ "$STORAGE_TYPE" = "spaces" ] && [ -n "$ENDPOINT_URL" ]; then
+            if aws s3 ls "s3://$BUCKET_NAME" --endpoint-url="$ENDPOINT_URL" >/dev/null 2>&1; then
+              echo "Bucket $BUCKET_NAME already exists"
+              exit 0
+            fi
+            aws s3 mb "s3://$BUCKET_NAME" --endpoint-url="$ENDPOINT_URL"
+          else
+            if aws s3 ls "s3://$BUCKET_NAME" >/dev/null 2>&1; then
+              echo "Bucket $BUCKET_NAME already exists"
+              exit 0
+            fi
+            aws s3 mb "s3://$BUCKET_NAME"
+          fi
+          
+          echo "Bucket $BUCKET_NAME created successfully"
+
+    - name: configure-bucket
+      script:
+        image: amazon/aws-cli:2.11.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+          
+          export AWS_ACCESS_KEY_ID="{{workflow.parameters.access-key-id}}"
+          export AWS_SECRET_ACCESS_KEY="{{workflow.parameters.secret-access-key}}"
+          export AWS_DEFAULT_REGION="{{workflow.parameters.region}}"
+          
+          BUCKET_NAME="{{workflow.parameters.bucket-name}}"
+          STORAGE_TYPE="{{workflow.parameters.storage-type}}"
+          ENDPOINT_URL="{{workflow.parameters.endpoint-url}}"
+          MAKE_PUBLIC="{{workflow.parameters.make-public}}"
+          
+          echo "Configuring bucket: $BUCKET_NAME"
+          
+          # Set endpoint URL for spaces
+          ENDPOINT_ARGS=""
+          if [ "$STORAGE_TYPE" = "spaces" ] && [ -n "$ENDPOINT_URL" ]; then
+            ENDPOINT_ARGS="--endpoint-url=$ENDPOINT_URL"
+          fi
+          
+          # Enable versioning
+          echo "Enabling versioning..."
+          aws s3api put-bucket-versioning \
+            --bucket "$BUCKET_NAME" \
+            $ENDPOINT_ARGS \
+            --versioning-configuration Status=Enabled
+          
+          # Configure public access if requested
+          if [ "$MAKE_PUBLIC" = "true" ]; then
+            echo "Making bucket public..."
+            
+            # Remove public access block
+            aws s3api put-public-access-block \
+              --bucket "$BUCKET_NAME" \
+              $ENDPOINT_ARGS \
+              --public-access-block-configuration \
+              BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false
+            
+            # Set bucket policy for public read access
+            POLICY='{
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "PublicReadGetObject",
+                  "Effect": "Allow",
+                  "Principal": "*",
+                  "Action": "s3:GetObject",
+                  "Resource": "arn:aws:s3:::'$BUCKET_NAME'/*"
+                }
+              ]
+            }'
+            
+            aws s3api put-bucket-policy \
+              --bucket "$BUCKET_NAME" \
+              $ENDPOINT_ARGS \
+              --policy "$POLICY"
+          fi
+          
+          echo "Storage provisioning completed successfully!"
+          echo "- Bucket: $BUCKET_NAME"
+          echo "- Type: $STORAGE_TYPE"
+          echo "- Region: {{workflow.parameters.region}}"
+          echo "- Public: $MAKE_PUBLIC"
+          if [ -n "$ENDPOINT_URL" ]; then
+            echo "- Endpoint: $ENDPOINT_URL"
+          fi
+          echo "- Namespace: {{workflow.parameters.namespace}}"

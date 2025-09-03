@@ -1,0 +1,129 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: mongodb-provision-template
+spec:
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for deployment"
+      - name: database-name
+        description: "Name of the main database to create"
+        value: "openedx"
+      - name: forum-database-name
+        description: "Name of the forum database to create"
+        value: "forum"
+      - name: username
+        description: "Name of the user to create"
+        value: "openedx_user"
+      - name: password
+        description: "Password for the user"
+      - name: mongodb-host
+        description: "MongoDB host address"
+        value: "mongodb"
+      - name: mongodb-port
+        description: "MongoDB port"
+        value: "27017"
+      - name: mongodb-admin-user
+        description: "MongoDB admin user"
+        value: "admin"
+      - name: mongodb-admin-password
+        description: "MongoDB admin password"
+      - name: mongodb-admin-database
+        description: "MongoDB admin database"
+        value: "admin"
+
+  templates:
+    - name: main
+      steps:
+        - - name: create-databases
+            template: create-databases
+        - - name: create-user
+            template: create-user
+        - - name: grant-permissions
+            template: grant-permissions
+
+    - name: create-databases
+      script:
+        image: mongo:6.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+          
+          MONGO_URI="mongodb://{{workflow.parameters.mongodb-admin-user}}:{{workflow.parameters.mongodb-admin-password}}@{{workflow.parameters.mongodb-host}}:{{workflow.parameters.mongodb-port}}/{{workflow.parameters.mongodb-admin-database}}"
+          
+          echo "Creating database: {{workflow.parameters.database-name}}"
+          mongosh "$MONGO_URI" --eval "
+            use {{workflow.parameters.database-name}};
+            db.createCollection('init');
+            db.init.drop();
+            print('Database {{workflow.parameters.database-name}} created');
+          "
+          
+          echo "Creating database: {{workflow.parameters.forum-database-name}}"
+          mongosh "$MONGO_URI" --eval "
+            use {{workflow.parameters.forum-database-name}};
+            db.createCollection('init');
+            db.init.drop();
+            print('Database {{workflow.parameters.forum-database-name}} created');
+          "
+
+    - name: create-user
+      script:
+        image: mongo:6.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+          
+          MONGO_URI="mongodb://{{workflow.parameters.mongodb-admin-user}}:{{workflow.parameters.mongodb-admin-password}}@{{workflow.parameters.mongodb-host}}:{{workflow.parameters.mongodb-port}}/{{workflow.parameters.mongodb-admin-database}}"
+          
+          echo "Creating user: {{workflow.parameters.username}}"
+          mongosh "$MONGO_URI" --eval "
+            try {
+              db.createUser({
+                user: '{{workflow.parameters.username}}',
+                pwd: '{{workflow.parameters.password}}',
+                roles: []
+              });
+              print('User {{workflow.parameters.username}} created');
+            } catch (e) {
+              if (e.code === 11000) {
+                print('User {{workflow.parameters.username}} already exists');
+              } else {
+                throw e;
+              }
+            }
+          "
+
+    - name: grant-permissions
+      script:
+        image: mongo:6.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+          
+          MONGO_URI="mongodb://{{workflow.parameters.mongodb-admin-user}}:{{workflow.parameters.mongodb-admin-password}}@{{workflow.parameters.mongodb-host}}:{{workflow.parameters.mongodb-port}}/{{workflow.parameters.mongodb-admin-database}}"
+          
+          echo "Granting permissions to user: {{workflow.parameters.username}}"
+          mongosh "$MONGO_URI" --eval "
+            try {
+              db.grantRolesToUser('{{workflow.parameters.username}}', [
+                {role: 'readWrite', db: '{{workflow.parameters.database-name}}'},
+                {role: 'readWrite', db: '{{workflow.parameters.forum-database-name}}'}
+              ]);
+              print('Permissions granted to {{workflow.parameters.username}}');
+            } catch (e) {
+              print('Error granting permissions: ' + e.message);
+              throw e;
+            }
+          "
+          
+          echo "MongoDB provisioning completed successfully!"
+          echo "- Main database: {{workflow.parameters.database-name}}"
+          echo "- Forum database: {{workflow.parameters.forum-database-name}}"
+          echo "- User: {{workflow.parameters.username}}"
+          echo "- Namespace: {{workflow.parameters.namespace}}"
