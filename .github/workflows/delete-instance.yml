@@ -1,0 +1,55 @@
+name: PHD Instance Deletion
+
+on:
+  workflow_call:
+    secrets:
+      KUBECONFIG_CONTENT:
+        description: "Kubernetes config content from terraform output"
+        required: true
+    inputs:
+      INSTANCE_NAME:
+        description: "Instance to delete"
+        type: string
+      RUNNER_WORKFLOW_LABEL:
+        description: 'The label of the runner workflow to run'
+        required: false
+        type: string
+        default: 'ubuntu-24.04'
+
+jobs:
+  delete-instance:
+    runs-on: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
+
+    steps:
+      - name: Checkout repository for helper scripts
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl with terraform output
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify cluster connectivity
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Delete instance
+        run: |
+          source ./activate
+          phd_delete_instance "$INSTANCE_NAME"
+
+      - name: Verify instance deletion
+        run: |
+          echo "Instance '$INSTANCE_NAME' deletion completed"
+          echo "All resources have been removed from the cluster"

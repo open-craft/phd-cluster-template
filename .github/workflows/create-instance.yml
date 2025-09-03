@@ -1,0 +1,98 @@
+name: PHD Instance Creator
+
+on:
+  workflow_call:
+    secrets:
+      KUBECONFIG_CONTENT:
+        description: "Kubernetes config content from terraform output"
+        required: true
+    inputs:
+      INSTANCE_NAME:
+        description: "Instance to create"
+        type: string
+      PLATFORM_NAME:
+        description: "Platform name"
+        default: "My Open edX Instance"
+        type: string
+      INSTANCE_TEMPLATE_REPOSITORY:
+        description: "Repository containing the instance template"
+        default: "https://github.com/open-craft/phd-cluster-template.git"
+        type: string
+      EDX_PLATFORM_REPOSITORY:
+        description: "Repository to clone the edx-platform from"
+        default: "https://github.com/openedx/edx-platform.git"
+        type: string
+      EDX_PLATFORM_VERSION:
+        description: "Version of the edx-platform to use"
+        default: "release/teak"
+        type: string
+      TUTOR_VERSION:
+        description: "Version of the tutor to use"
+        default: "v20.0.1"
+        type: string
+      RUNNER_WORKFLOW_LABEL:
+        description: 'The label of the runner workflow to run'
+        required: false
+        type: string
+        default: 'ubuntu-24.04'
+
+jobs:
+  create-instance:
+    runs-on: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
+      PLATFORM_NAME: ${{ inputs.PLATFORM_NAME }}
+      INSTANCE_TEMPLATE_REPOSITORY: ${{ inputs.INSTANCE_TEMPLATE_REPOSITORY }}
+      EDX_PLATFORM_REPOSITORY: ${{ inputs.EDX_PLATFORM_REPOSITORY }}
+      EDX_PLATFORM_VERSION: ${{ inputs.EDX_PLATFORM_VERSION }}
+      TUTOR_VERSION: ${{ inputs.TUTOR_VERSION }}
+
+    steps:
+      - name: Checkout repository for helper scripts
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        run: |
+          pip install cookiecutter
+          pip install -r requirements/base.txt
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl with terraform output
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify cluster connectivity
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Create instance
+        run: |
+          source ./activate
+          phd_create_instance \
+            "$INSTANCE_NAME" \
+            "$INSTANCE_TEMPLATE_REPOSITORY" \
+            "$PLATFORM_NAME" \
+            "$EDX_PLATFORM_REPOSITORY" \
+            "$EDX_PLATFORM_VERSION" \
+            "$TUTOR_VERSION"
+
+      - name: Verify instance setup
+        run: |
+          echo "Instance '$INSTANCE_NAME' created successfully"
+          echo "Namespace: $INSTANCE_NAME"
+          echo "ArgoCD Application: $INSTANCE_NAME.kubernetes.default.svc"
+          kubectl get all -n "$INSTANCE_NAME" || echo "No resources found in namespace (this is normal for a new instance)"

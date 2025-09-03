@@ -1,0 +1,311 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: mongodb-provision-template
+spec:
+  serviceAccountName: workflow-executor
+  entrypoint: main
+  volumes:
+    - name: service-account-token
+      secret:
+        secretName: workflow-executor-token
+  podGC:
+    strategy: OnWorkflowSuccess
+    deleteDelayDuration: 24h
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for deployment"
+      - name: database-name
+        description: "Name of the database to create"
+      - name: username
+        description: "Database username to create"
+      - name: password
+        description: "Password for the database user"
+      - name: mongodb-host
+        description: "MongoDB host"
+      - name: mongodb-port
+        description: "MongoDB port"
+        value: "27017"
+      - name: mongodb-admin-user
+        description: "MongoDB admin username"
+      - name: mongodb-admin-password
+        description: "MongoDB admin password"
+      - name: mongodb-admin-database
+        description: "MongoDB admin database"
+        value: "admin"
+      - name: mongodb-provider
+        description: "MongoDB provider type (digitalocean_api, mongodb_direct, atlas)"
+        value: "mongodb_direct"
+      - name: mongodb-cluster-id
+        description: "MongoDB cluster ID (for DigitalOcean API provider)"
+        value: ""
+      - name: digitalocean-token
+        description: "DigitalOcean API token (for DigitalOcean API provider)"
+        value: ""
+
+  templates:
+    - name: main
+      steps:
+        # Choose provisioning strategy based on provider
+        - - name: provision-digitalocean
+            template: provision-digitalocean-api
+            when: "{{workflow.parameters.mongodb-provider}} == 'digitalocean_api'"
+        - - name: provision-mongodb-direct
+            template: provision-mongodb-direct
+            when: "{{workflow.parameters.mongodb-provider}} == 'mongodb_direct'"
+        - - name: provision-atlas
+            template: provision-atlas
+            when: "{{workflow.parameters.mongodb-provider}} == 'atlas'"
+
+    #############################################################################
+    # DigitalOcean Managed MongoDB (API-based)
+    #############################################################################
+    - name: provision-digitalocean-api
+      steps:
+        - - name: validate-do-config
+            template: validate-digitalocean-config
+        - - name: create-databases-do
+            template: create-databases-digitalocean
+        - - name: create-user-do
+            template: create-user-digitalocean
+
+    - name: validate-digitalocean-config
+      script:
+        image: alpine:3.18
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
+          TOKEN="{{workflow.parameters.digitalocean-token}}"
+
+          if [ -z "$CLUSTER_ID" ]; then
+            echo "Error: mongodb-cluster-id is required for digitalocean_api provider"
+            exit 1
+          fi
+
+          if [ -z "$TOKEN" ]; then
+            echo "Error: digitalocean-token is required for digitalocean_api provider"
+            exit 1
+          fi
+
+          echo "DigitalOcean configuration validated"
+
+    - name: create-databases-digitalocean
+      script:
+        image: curlimages/curl:8.1.2
+        command: [sh]
+        env:
+          - name: DIGITALOCEAN_TOKEN
+            value: "{{workflow.parameters.digitalocean-token}}"
+        source: |
+          #!/bin/sh
+          set -e
+
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
+          MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
+
+          echo "Creating database via DigitalOcean API: $DATABASE_NAME"
+
+          # Create database
+          echo "Creating database: $DATABASE_NAME"
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+            -d "{\"name\": \"$DATABASE_NAME\"}" \
+            "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/dbs")
+
+          if echo "$RESPONSE" | grep -q "\"name\":\"$DATABASE_NAME\""; then
+            echo "Database $DATABASE_NAME created successfully"
+          elif echo "$RESPONSE" | grep -q "already exists"; then
+            echo "Database $DATABASE_NAME already exists"
+          else
+            echo "Failed to create database $DATABASE_NAME: $RESPONSE"
+            exit 1
+          fi
+
+    - name: create-user-digitalocean
+      script:
+        image: curlimages/curl:8.1.2
+        command: [sh]
+        env:
+          - name: DIGITALOCEAN_TOKEN
+            value: "{{workflow.parameters.digitalocean-token}}"
+        source: |
+          #!/bin/sh
+          set -e
+
+          USERNAME="{{workflow.parameters.username}}"
+          MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
+
+          echo "Creating user via DigitalOcean API: $USERNAME"
+
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+            -d "{\"name\": \"$USERNAME\"}" \
+            "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users")
+
+          if echo "$RESPONSE" | grep -q "\"name\":\"$USERNAME\""; then
+            echo "User $USERNAME created successfully"
+            USER_PASSWORD=$(echo "$RESPONSE" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
+            echo "Generated password: $USER_PASSWORD"
+            echo "⚠ Note: DigitalOcean manages user passwords. The password in config may differ."
+          elif echo "$RESPONSE" | grep -q "already exists"; then
+            echo "User $USERNAME already exists"
+          else
+            echo "Failed to create user $USERNAME: $RESPONSE"
+            exit 1
+          fi
+
+          echo ""
+          echo "MongoDB provisioning completed (DigitalOcean API)"
+
+    #############################################################################
+    # MongoDB Direct Connection (self-hosted or Atlas with direct access)
+    #############################################################################
+    - name: provision-mongodb-direct
+      steps:
+        - - name: validate-mongodb-config
+            template: validate-mongodb-direct-config
+        - - name: create-databases-direct
+            template: create-databases-mongodb-direct
+        - - name: create-user-direct
+            template: create-user-mongodb-direct
+
+    - name: validate-mongodb-direct-config
+      script:
+        image: alpine:3.18
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          HOST="{{workflow.parameters.mongodb-host}}"
+          ADMIN_USER="{{workflow.parameters.mongodb-admin-user}}"
+          ADMIN_PASSWORD="{{workflow.parameters.mongodb-admin-password}}"
+
+          if [ -z "$HOST" ]; then
+            echo "Error: mongodb-host is required for mongodb_direct provider"
+            exit 1
+          fi
+
+          if [ -z "$ADMIN_USER" ]; then
+            echo "Error: mongodb-admin-user is required for mongodb_direct provider"
+            exit 1
+          fi
+
+          if [ -z "$ADMIN_PASSWORD" ]; then
+            echo "Error: mongodb-admin-password is required for mongodb_direct provider"
+            exit 1
+          fi
+
+          echo "MongoDB direct connection configuration validated"
+
+    - name: create-databases-mongodb-direct
+      script:
+        image: mongo:7.0
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
+          MONGODB_HOST="{{workflow.parameters.mongodb-host}}"
+          MONGODB_PORT="{{workflow.parameters.mongodb-port}}"
+          ADMIN_USER="{{workflow.parameters.mongodb-admin-user}}"
+          ADMIN_PASSWORD="{{workflow.parameters.mongodb-admin-password}}"
+          ADMIN_DATABASE="{{workflow.parameters.mongodb-admin-database}}"
+
+          echo "Creating database via MongoDB connection: $DATABASE_NAME"
+
+          # MongoDB connection string
+          MONGO_URI="mongodb://${ADMIN_USER}:${ADMIN_PASSWORD}@${MONGODB_HOST}:${MONGODB_PORT}/${ADMIN_DATABASE}"
+
+          # Create database (implicit by inserting a document)
+          echo "Creating database: $DATABASE_NAME"
+          mongosh "$MONGO_URI" --quiet --eval "
+            use $DATABASE_NAME;
+            db.createCollection('_init');
+            print('Database $DATABASE_NAME created/verified');
+          " || {
+            echo "Failed to create database $DATABASE_NAME"
+            exit 1
+          }
+
+    - name: create-user-mongodb-direct
+      script:
+        image: mongo:7.0
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          USERNAME="{{workflow.parameters.username}}"
+          PASSWORD="{{workflow.parameters.password}}"
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
+          MONGODB_HOST="{{workflow.parameters.mongodb-host}}"
+          MONGODB_PORT="{{workflow.parameters.mongodb-port}}"
+          ADMIN_USER="{{workflow.parameters.mongodb-admin-user}}"
+          ADMIN_PASSWORD="{{workflow.parameters.mongodb-admin-password}}"
+          ADMIN_DATABASE="{{workflow.parameters.mongodb-admin-database}}"
+
+          echo "Creating user via MongoDB connection: $USERNAME"
+
+          # MongoDB connection string
+          MONGO_URI="mongodb://${ADMIN_USER}:${ADMIN_PASSWORD}@${MONGODB_HOST}:${MONGODB_PORT}/${ADMIN_DATABASE}"
+
+          # Create user with access to database
+          mongosh "$MONGO_URI" --quiet --eval "
+            use $ADMIN_DATABASE;
+
+            // Check if user exists
+            var userExists = db.getUser('$USERNAME');
+
+            if (userExists) {
+              print('User $USERNAME already exists, updating...');
+              db.updateUser('$USERNAME', {
+                pwd: '$PASSWORD',
+                roles: [
+                  { role: 'readWrite', db: '$DATABASE_NAME' }
+                ]
+              });
+              print('User $USERNAME updated successfully');
+            } else {
+              db.createUser({
+                user: '$USERNAME',
+                pwd: '$PASSWORD',
+                roles: [
+                  { role: 'readWrite', db: '$DATABASE_NAME' }
+                ]
+              });
+              print('User $USERNAME created successfully');
+            }
+          " || {
+            echo "Failed to create/update user $USERNAME"
+            exit 1
+          }
+
+          echo ""
+          echo "MongoDB provisioning completed (Direct Connection)"
+          echo "- Host: $MONGODB_HOST:$MONGODB_PORT"
+          echo "- Database: $DATABASE_NAME"
+          echo "- Username: $USERNAME"
+
+    #############################################################################
+    # MongoDB Atlas (API-based, future implementation)
+    #############################################################################
+    - name: provision-atlas
+      script:
+        image: alpine:3.18
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          echo "MongoDB Atlas provisioning is not yet implemented"
+          echo "Please use 'mongodb_direct' provider with Atlas connection string"
+          echo "Or contribute an Atlas API implementation!"
+          exit 1

@@ -1,0 +1,21 @@
+{
+  "environment": "production",
+  "cluster_name": "PHD Production Cluster",
+  "cluster_slug": "{{ cookiecutter.cluster_name.lower().replace(' ', '-') }}",
+  "cluster_domain": "{{ cookiecutter.cluster_slug.lower().replace('_', '-') + '.example.com' }}",
+  "short_description": "Kubernetes cluster to host Open edX instances",
+  "cloud_provider": [
+    "aws",
+    "digitalocean"
+  ],
+  "harmony_module_version": "bfdcca60d62801acbf61e77f49de25889647b5ef",
+  "opencraft_module_version": "v1.0.1",
+  "picasso_version": "main",
+  "phd_cluster_template_version": "main",
+  "git_organization": "open-craft",
+  "git_repository": [
+    "https://github.com/{{ cookiecutter.git_organization }}/phd-{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}.git",
+    "https://github.com/{{ cookiecutter.git_organization }}/phd-{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}-{{ cookiecutter.environment.lower().replace(' ', '-') }}.git",
+    "https://github.com/{{ cookiecutter.git_organization }}/{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}.git"
+  ]
+}

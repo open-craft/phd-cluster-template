@@ -1,0 +1,99 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: mysql-deprovision-template
+spec:
+  serviceAccountName: workflow-executor
+  entrypoint: main
+  podGC:
+    strategy: OnWorkflowSuccess
+    deleteDelayDuration: 24h # Delete pods 24 hours after successful completion
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for cleanup"
+      - name: database-name
+        description: "Name of the database to drop"
+        value: "openedx"
+      - name: username
+        description: "Name of the user to drop"
+        value: "openedx_user"
+      - name: mysql-host
+        description: "MySQL host address"
+        value: "mysql"
+      - name: mysql-port
+        description: "MySQL port"
+        value: "3306"
+      - name: mysql-root-user
+        description: "MySQL root user"
+        value: "root"
+      - name: mysql-root-password
+        description: "MySQL root password"
+
+  templates:
+    - name: main
+      steps:
+        - - name: revoke-permissions
+            template: revoke-permissions
+        - - name: drop-user
+            template: drop-user
+        - - name: drop-database
+            template: drop-database
+
+    - name: revoke-permissions
+      script:
+        image: mysql:8.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+
+          export MYSQL_PWD="{{workflow.parameters.mysql-root-password}}"
+
+          echo "Revoking permissions for user: {{workflow.parameters.username}}"
+          mysql -h{{workflow.parameters.mysql-host}} \
+                -P{{workflow.parameters.mysql-port}} \
+                -u{{workflow.parameters.mysql-root-user}} \
+                -e "REVOKE ALL PRIVILEGES ON \`{{workflow.parameters.database-name}}\`.* FROM '{{workflow.parameters.username}}'@'%'; FLUSH PRIVILEGES;" || echo "User or database may not exist"
+
+          echo "Permissions revoked for user {{workflow.parameters.username}}"
+
+    - name: drop-user
+      script:
+        image: mysql:8.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+
+          export MYSQL_PWD="{{workflow.parameters.mysql-root-password}}"
+
+          echo "Dropping user: {{workflow.parameters.username}}"
+          mysql -h{{workflow.parameters.mysql-host}} \
+                -P{{workflow.parameters.mysql-port}} \
+                -u{{workflow.parameters.mysql-root-user}} \
+                -e "DROP USER IF EXISTS '{{workflow.parameters.username}}'@'%';" || echo "User may not exist"
+
+          echo "User {{workflow.parameters.username}} dropped successfully"
+
+    - name: drop-database
+      script:
+        image: mysql:8.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+
+          export MYSQL_PWD="{{workflow.parameters.mysql-root-password}}"
+
+          echo "Dropping database: {{workflow.parameters.database-name}}"
+          mysql -h{{workflow.parameters.mysql-host}} \
+                -P{{workflow.parameters.mysql-port}} \
+                -u{{workflow.parameters.mysql-root-user}} \
+                -e "DROP DATABASE IF EXISTS \`{{workflow.parameters.database-name}}\`;" || echo "Database may not exist"
+
+          echo "MySQL deprovisioning completed successfully!"
+          echo "- Database: {{workflow.parameters.database-name}} (dropped)"
+          echo "- User: {{workflow.parameters.username}} (dropped)"
+          echo "- Host: {{workflow.parameters.mysql-host}}:{{workflow.parameters.mysql-port}}"
+          echo "- Namespace: {{workflow.parameters.namespace}}"

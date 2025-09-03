@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# PHD cluster activation script. This script sets up the environment for working
+# with a PHD cluster, including Kubernetes configuration and helper functions.
+#
+# DO NOT RUN THIS FILE DIRECTLY; IT IS INTENTIONALLY NOT EXECUTABLE.
+# TO USE THIS FILE SOURCE THE CONTENT OF IT BY EXECUTING "source activate".
+
+set -uo pipefail
+
+################################################################################
+# Constants and configuration
+################################################################################
+
+# Store current directory and determine infrastructure path
+pushd . > '/dev/null' || {
+    echo "Failed to store current directory" >&2
+    return 1
+}
+
+PHD_DEBUG=true
+
+readonly ROOT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]:-$0}")") || {
+    echo "Failed to determine infrastructure directory path" >&2
+    popd > '/dev/null'
+    return 1
+}
+
+readonly INFRA_DIR="${ROOT_DIR}/infrastructure"
+readonly INSTANCES_DIR="${ROOT_DIR}/instances"
+
+# Remote scripts configuration
+export REMOTE_SCRIPTS_VERSION="${REMOTE_SCRIPTS_VERSION:-main}"
+export REMOTE_SCRIPTS_DIR_URL="https://raw.githubusercontent.com/open-craft/phd-cluster-template/${REMOTE_SCRIPTS_VERSION}/scripts"
+
+################################################################################
+# Deactivation function
+################################################################################
+
+function deactivate_phd() {
+    # Restore original directory
+    popd > '/dev/null' 2>/dev/null || true
+
+    # Restore original Kubernetes config
+    if [[ -n "${_OLD_KUBECONFIG:-}" ]]; then
+        export KUBECONFIG="$_OLD_KUBECONFIG"
+        unset _OLD_KUBECONFIG
+    else
+        unset KUBECONFIG
+    fi
+
+    # Unset functions
+    unset -f deactivate_phd
+}
+
+################################################################################
+# Main activation logic
+################################################################################
+
+# Configure Kubernetes access
+if [[ -z "${_OLD_KUBECONFIG:-}" ]]; then
+    export _OLD_KUBECONFIG="${KUBECONFIG:-}"
+fi
+
+export KUBECONFIG="${INFRA_DIR}/.kubeconfig"
+
+# Load PHD commands directly into memory
+echo "Loading PHD helper scripts from $REMOTE_SCRIPTS_DIR_URL..."
+
+# shellcheck disable=SC1090
+source <(curl -sSL --fail "${REMOTE_SCRIPTS_DIR_URL}/phd-commands.sh") || {
+    echo "Failed to load PHD helper scripts" >&2
+    deactivate_phd
+    return 1
+}

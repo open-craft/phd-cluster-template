@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: "mongodb-deprovision-{{ PHD_INSTANCE_NAME }}"
+  namespace: "{{ PHD_INSTANCE_NAME }}"
+spec:
+  serviceAccountName: workflow-executor
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: namespace
+        value: "{{ PHD_INSTANCE_NAME }}"
+      - name: database-name
+        value: "{{ PHD_INSTANCE_MONGODB_DATABASE }}"
+      - name: username
+        value: "{{ PHD_INSTANCE_MONGODB_USERNAME }}"
+      - name: mongodb-host
+        value: "{{ PHD_INSTANCE_MONGODB_HOST }}"
+      - name: mongodb-port
+        value: "{{ PHD_INSTANCE_MONGODB_PORT }}"
+      - name: mongodb-admin-user
+        value: "{{ PHD_INSTANCE_MONGODB_ADMIN_USER }}"
+      - name: mongodb-admin-password
+        value: "{{ PHD_INSTANCE_MONGODB_ADMIN_PASSWORD }}"
+      - name: mongodb-admin-database
+        value: "{{ PHD_INSTANCE_MONGODB_ADMIN_DATABASE }}"
+      - name: mongodb-provider
+        value: "{{ PHD_INSTANCE_MONGODB_PROVIDER }}"
+      - name: mongodb-cluster-id
+        value: "{{ PHD_INSTANCE_MONGODB_CLUSTER_ID }}"
+      - name: digitalocean-token
+        value: "{{ PHD_INSTANCE_DIGITALOCEAN_TOKEN }}"
+  workflowTemplateRef:
+    name: mongodb-deprovision-template
+    clusterScope: true

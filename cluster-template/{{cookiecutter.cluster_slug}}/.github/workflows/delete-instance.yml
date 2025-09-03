@@ -1,0 +1,20 @@
+name: Delete Instance
+run-name: Delete '{% raw %}${{ inputs.INSTANCE_NAME }}{% endraw %}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      INSTANCE_NAME:
+        description: "Instance to delete"
+        type: string
+
+jobs:
+  delete-instance:
+    permissions:
+      contents: read
+    name: Delete Instance
+    uses: open-craft/phd-cluster-template/.github/workflows/delete-instance.yml@main
+    secrets:
+      KUBECONFIG_CONTENT: "{% raw %}${{ secrets.KUBECONFIG_CONTENT }}{% endraw %}"
+    with:
+      INSTANCE_NAME: "{% raw %}${{ inputs.INSTANCE_NAME }}{% endraw %}"
