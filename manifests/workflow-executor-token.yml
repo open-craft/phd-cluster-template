@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: workflow-executor-token
+  annotations:
+    kubernetes.io/service-account.name: workflow-executor
+type: kubernetes.io/service-account-token

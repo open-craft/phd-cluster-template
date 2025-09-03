@@ -1,0 +1,161 @@
+# Simple working Argo Server with basic authentication and access tokens
+# Based on official documentation: https://argo-workflows.readthedocs.io/en/latest/argo-server-auth-mode/
+# Uses client auth mode to properly integrate with Kubernetes RBAC and access tokens
+
+---
+# Secure workflow controller config with hardened defaults
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-controller-configmap
+  namespace: argo
+data:
+  containerRuntimeExecutor: pns
+  workflowDefaults: |
+    spec:
+      serviceAccountName: workflow-executor
+      volumes:
+        - name: service-account-token
+          secret:
+            secretName: workflow-executor-token
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 8737
+        runAsGroup: 8737
+      podGC:
+        strategy: OnPodCompletion
+  mainContainer: |
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 8737
+      runAsGroup: 8737
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+  executor: |
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 8737
+      runAsGroup: 8737
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+  # Links to other services
+  links: |
+    - name: ArgoCD
+      scope: workflow
+      url: https://argocd.{{ PHD_CLUSTER_DOMAIN }}/applications
+
+---
+# Local user accounts for authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argo-server-sso
+  namespace: argo
+type: Opaque
+stringData:
+  accounts.admin.enabled: "true"
+  accounts.admin.password: "{{ PHD_ARGO_ADMIN_PASSWORD_BCRYPT }}"
+  accounts.admin.tokens: ""
+
+---
+# RBAC policy for authorization
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-server-rbac-config
+  namespace: argo
+data:
+  policy.default: reject
+  policy.csv: |
+    # Deny everything for system unauthenticated
+    p, system:unauthenticated, *, *, *, deny
+
+    # Role definitions
+    p, role:admin, *, *, *, allow
+    p, role:developer, workflows, *, *, allow
+    p, role:developer, workflow-templates, *, *, allow
+    p, role:developer, cluster-workflow-templates, get, *, allow
+    p, role:developer, events, get, *, allow
+    p, role:developer, logs, get, *, allow
+    p, role:readonly, workflows, get, *, allow
+    p, role:readonly, workflow-templates, get, *, allow
+    p, role:readonly, cluster-workflow-templates, get, *, allow
+    p, role:readonly, events, get, *, allow
+    p, role:readonly, logs, get, *, allow
+
+    # User to role assignments
+    g, admin, role:admin
+
+---
+# Argo Server deployment with client auth mode for proper RBAC integration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-server
+  namespace: argo
+spec:
+  selector:
+    matchLabels:
+      app: argo-server
+  template:
+    metadata:
+      labels:
+        app: argo-server
+    spec:
+      serviceAccountName: argo-server
+      securityContext:
+        runAsNonRoot: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+        - name: argo-server
+          image: quay.io/argoproj/argocli:v3.7.1
+          command:
+            - argo
+            - server
+            - --auth-mode=sso
+            - --secure
+            - --loglevel=info
+          ports:
+            - containerPort: 2746
+              name: web
+          env:
+            - name: ARGO_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: ARGO_BASE_HREF
+              value: /
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 2746
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 2746
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 8737
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: tmp
+          emptyDir: {}

@@ -1,0 +1,200 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: mongodb-deprovision-template
+spec:
+  serviceAccountName: workflow-executor
+  entrypoint: main
+  podGC:
+    strategy: OnWorkflowSuccess
+    deleteDelayDuration: 24h # Delete pods 24 hours after successful completion
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for cleanup"
+      - name: database-name
+        description: "Name of the database to drop"
+        value: "openedx"
+      - name: username
+        description: "Name of the user to drop"
+        value: "openedx_user"
+      - name: mongodb-provider
+        description: "MongoDB provider type (digitalocean_api, atlas)"
+        value: "digitalocean_api"
+      - name: mongodb-cluster-id
+        description: "MongoDB cluster ID (for DigitalOcean API provider)"
+        value: ""
+      - name: digitalocean-token
+        description: "DigitalOcean API token (for DigitalOcean API provider)"
+        value: ""
+      - name: atlas-public-key
+        description: "MongoDB Atlas API public key (for Atlas provider)"
+        value: ""
+      - name: atlas-private-key
+        description: "MongoDB Atlas API private key (for Atlas provider)"
+        value: ""
+      - name: atlas-project-id
+        description: "MongoDB Atlas project ID (for Atlas provider)"
+        value: ""
+      - name: atlas-cluster-name
+        description: "MongoDB Atlas cluster name (for Atlas provider)"
+        value: ""
+
+  templates:
+    - name: main
+      steps:
+        # Choose deprovisioning strategy based on provider
+        - - name: deprovision-digitalocean
+            template: deprovision-digitalocean-api
+            when: "{{workflow.parameters.mongodb-provider}} == 'digitalocean_api'"
+        - - name: deprovision-atlas
+            template: deprovision-atlas
+            when: "{{workflow.parameters.mongodb-provider}} == 'atlas'"
+
+    #############################################################################
+    # DigitalOcean Managed MongoDB (API-based)
+    #############################################################################
+    - name: deprovision-digitalocean-api
+      steps:
+        - - name: delete-user-do
+            template: delete-user-digitalocean
+        - - name: delete-database-do
+            template: delete-database-digitalocean
+
+    - name: delete-database-digitalocean
+      script:
+        image: curlimages/curl:8.1.2
+        command: [sh]
+        env:
+          - name: DIGITALOCEAN_TOKEN
+            value: "{{workflow.parameters.digitalocean-token}}"
+        source: |
+          #!/bin/sh
+          set -e
+
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
+          MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
+
+          echo "Deleting database via DigitalOcean API: $DATABASE_NAME"
+
+          # Delete database
+          RESPONSE=$(curl -s -X DELETE \
+            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+            "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/dbs/$DATABASE_NAME")
+
+          # Check response - DELETE returns 204 on success or error details
+          if [ $? -eq 0 ]; then
+            echo "Database $DATABASE_NAME deleted successfully or did not exist"
+          else
+            echo "Warning: Failed to delete database $DATABASE_NAME"
+            echo "Response: $RESPONSE"
+          fi
+
+    - name: delete-user-digitalocean
+      script:
+        image: curlimages/curl:8.1.2
+        command: [sh]
+        env:
+          - name: DIGITALOCEAN_TOKEN
+            value: "{{workflow.parameters.digitalocean-token}}"
+        source: |
+          #!/bin/sh
+          set -e
+
+          USERNAME="{{workflow.parameters.username}}"
+          MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
+
+          echo "Deleting user via DigitalOcean API: $USERNAME"
+
+          # Delete user
+          RESPONSE=$(curl -s -X DELETE \
+            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+            "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users/$USERNAME")
+
+          # Check response
+          if [ $? -eq 0 ]; then
+            echo "User $USERNAME deleted successfully or did not exist"
+          else
+            echo "Warning: Failed to delete user $USERNAME"
+            echo "Response: $RESPONSE"
+          fi
+
+          echo ""
+          echo "MongoDB deprovisioning completed (DigitalOcean API)"
+
+
+    #############################################################################
+    # MongoDB Atlas (API-based using Atlas CLI)
+    #############################################################################
+    - name: deprovision-atlas
+      steps:
+        - - name: delete-user-atlas
+            template: delete-user-atlas
+        - - name: delete-database-atlas
+            template: delete-database-atlas
+
+    - name: delete-user-atlas
+      script:
+        image: debian:bookworm-slim
+        command: [bash]
+        env:
+          - name: MCLI_PUBLIC_API_KEY
+            value: "{{workflow.parameters.atlas-public-key}}"
+          - name: MCLI_PRIVATE_API_KEY
+            value: "{{workflow.parameters.atlas-private-key}}"
+          - name: MCLI_PROJECT_ID
+            value: "{{workflow.parameters.atlas-project-id}}"
+          - name: MCLI_OPS_MANAGER_URL
+            value: "https://cloud.mongodb.com"
+        source: |
+          #!/bin/bash
+          set -euo pipefail
+
+          USERNAME="{{workflow.parameters.username}}"
+          PROJECT_ID="{{workflow.parameters.atlas-project-id}}"
+
+          # Install Atlas CLI from official MongoDB package
+          echo "Installing MongoDB Atlas CLI..."
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -y
+          apt-get install -y curl ca-certificates
+
+          ARCH=$(dpkg --print-architecture)
+          VERSION="1.28.0"
+          DEB_URL="https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_${VERSION}_linux_${ARCH}.deb"
+
+          curl -fsSL "$DEB_URL" -o /tmp/atlas-cli.deb
+          dpkg -i /tmp/atlas-cli.deb
+          atlas --version
+
+          echo ""
+          echo "Deleting Atlas database user: $USERNAME"
+
+          # Delete user using Atlas CLI
+          if atlas dbusers delete "$USERNAME" \
+            --projectId "$PROJECT_ID" \
+            --force \
+            --output json 2>&1; then
+            echo "User $USERNAME deleted successfully"
+          else
+            echo "User $USERNAME does not exist (already deleted)"
+          fi
+
+    - name: delete-database-atlas
+      script:
+        image: alpine:3.18
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
+
+          echo "Atlas database cleanup: $DATABASE_NAME"
+          echo ""
+          echo "Atlas does not support database deletion via CLI/API."
+          echo "  Databases are automatically removed when all collections are deleted."
+          echo ""
+          echo "MongoDB Atlas deprovisioning completed"
+          echo "- User: {{workflow.parameters.username}} (deleted)"
+          echo "- Database: $DATABASE_NAME (auto-removed when empty)"

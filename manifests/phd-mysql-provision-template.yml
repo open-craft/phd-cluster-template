@@ -1,0 +1,108 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: mysql-provision-template
+spec:
+  serviceAccountName: workflow-executor
+  entrypoint: main
+  volumes:
+    - name: service-account-token
+      secret:
+        secretName: workflow-executor-token
+  podGC:
+    strategy: OnWorkflowSuccess
+    deleteDelayDuration: 24h # Delete pods 24 hours after successful completion
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for deployment"
+      - name: database-name
+        description: "Name of the database to create"
+        value: "openedx"
+      - name: username
+        description: "Name of the user to create"
+        value: "openedx_user"
+      - name: password
+        description: "Password for the user"
+      - name: mysql-host
+        description: "MySQL host address"
+        value: "mysql"
+      - name: mysql-port
+        description: "MySQL port"
+        value: "3306"
+      - name: mysql-root-user
+        description: "MySQL root user"
+        value: "root"
+      - name: mysql-root-password
+        description: "MySQL root password"
+
+  templates:
+    - name: main
+      steps:
+        - - name: create-database
+            template: create-database
+        - - name: create-user
+            template: create-user
+        - - name: grant-permissions
+            template: grant-permissions
+
+    - name: create-database
+      script:
+        image: mysql:8.0
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          export MYSQL_PWD="{{workflow.parameters.mysql-root-password}}"
+
+          echo "Creating database: {{workflow.parameters.database-name}}"
+          mysql -h{{workflow.parameters.mysql-host}} \
+                -P{{workflow.parameters.mysql-port}} \
+                -u{{workflow.parameters.mysql-root-user}} \
+                --connect-timeout=10 \
+                -e "CREATE DATABASE IF NOT EXISTS \`{{workflow.parameters.database-name}}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+          echo "Database {{workflow.parameters.database-name}} created successfully"
+
+    - name: create-user
+      script:
+        image: mysql:8.0
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          export MYSQL_PWD="{{workflow.parameters.mysql-root-password}}"
+
+          echo "Creating user: {{workflow.parameters.username}}"
+          mysql -h{{workflow.parameters.mysql-host}} \
+                -P{{workflow.parameters.mysql-port}} \
+                -u{{workflow.parameters.mysql-root-user}} \
+                --connect-timeout=10 \
+                -e "CREATE USER IF NOT EXISTS '{{workflow.parameters.username}}'@'%' IDENTIFIED BY '{{workflow.parameters.password}}';"
+
+          echo "User {{workflow.parameters.username}} created successfully"
+
+    - name: grant-permissions
+      script:
+        image: mysql:8.0
+        command: [sh]
+        source: |
+          #!/bin/sh
+          set -e
+
+          export MYSQL_PWD="{{workflow.parameters.mysql-root-password}}"
+
+          echo "Granting permissions to user: {{workflow.parameters.username}}"
+          mysql -h{{workflow.parameters.mysql-host}} \
+                -P{{workflow.parameters.mysql-port}} \
+                -u{{workflow.parameters.mysql-root-user}} \
+                --connect-timeout=10 \
+                -e "GRANT ALL PRIVILEGES ON \`{{workflow.parameters.database-name}}\`.* TO '{{workflow.parameters.username}}'@'%'; FLUSH PRIVILEGES;"
+
+          echo "MySQL provisioning completed successfully"
+          echo "- Database: {{workflow.parameters.database-name}}"
+          echo "- User: {{workflow.parameters.username}}"
+          echo "- Host: {{workflow.parameters.mysql-host}}:{{workflow.parameters.mysql-port}}"
+          echo "- Namespace: {{workflow.parameters.namespace}}"
