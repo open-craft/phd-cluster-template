@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "cluster_name": {
+      "type": "string"
+    },
+    "cluster_slug": {
+      "type": "string"
+    },
+    "cloud_provider": {
+      "enum": ["aws", "digitalocean"]
+    }
+  },
+  "required": ["$schema", "cluster_name", "cluster_slug", "cloud_provider"]
+}
