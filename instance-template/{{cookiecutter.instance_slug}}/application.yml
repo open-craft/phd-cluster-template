@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: "{{cookiecutter.instance_slug}}-{{cookiecutter.environment}}"
+  namespace: argocd
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: "{{cookiecutter.instance_slug}}"
+  project: "default"
+  source:
+    path: "instances/{{cookiecutter.instance_slug}}/env"
+    repoURL: "{{cookiecutter.cluster_repository}}"
+    targetRevision: "{{cookiecutter.cluster_repository_branch}}"
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true

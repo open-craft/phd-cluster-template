@@ -1,0 +1,92 @@
+# Ensure all checks are run to reduce back-and-forth between fixing and checking
+fail_fast: false
+
+default_stages: [pre-commit, pre-push]
+default_install_hook_types: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Check Python
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-docstring-first
+      - id: debug-statements
+
+      # Check Shell
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+        exclude: ^cluster-template/phd-\{\{cookiecutter\.cluster_slug_normalized\}\}-cluster/activate$
+
+      # Check JSON/YAML
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^cluster-template/phd-\{\{cookiecutter\.cluster_slug_normalized\}\}-cluster/.github/workflows/(build|create-instance|delete-instance).yml$
+      - id: check-json
+      - id: pretty-format-json
+        args: [--no-sort-keys]
+
+      # Check files
+      - id: check-symlinks
+      - id: destroyed-symlinks
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: detect-aws-credentials
+        args: [--allow-missing-credentials]
+
+      # Check Git
+      - id: forbid-new-submodules
+      - id: check-vcs-permalinks
+      - id: check-merge-conflict
+      - id: no-commit-to-branch
+        name: no-commit-to-main
+        args: [--branch, main]
+
+  # Check Python Formatting
+  - repo: https://github.com/psf/black
+    rev: 25.9.0
+    hooks:
+      - id: black
+        args: [--config=tooling/pyproject.toml]
+
+  # Check Python Import Sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        args: [--settings-path=tooling/pyproject.toml]
+
+  # Check Shell Formatting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+
+  # Check Commit Messages
+  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+    rev: v9.23.0
+    hooks:
+      - id: commitlint
+        stages: [commit-msg]
+        additional_dependencies:
+          - "@commitlint/config-conventional"
+          - commitlint-plugin-function-rules
+
+  # Check Terraform
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.102.0
+    hooks:
+      - id: terraform_fmt
+        name: terraform-fmt
+        args: ["--args=-diff", "--args=-write=true"]
+
+  - repo: https://github.com/terraform-docs/terraform-docs
+    rev: "v0.20.0"
+    hooks:
+      - id: terraform-docs-system

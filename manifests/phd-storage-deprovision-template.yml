@@ -1,0 +1,141 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: storage-deprovision-template
+spec:
+  serviceAccountName: workflow-executor
+  entrypoint: main
+  podGC:
+    strategy: OnWorkflowSuccess
+    deleteDelayDuration: 24h
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for cleanup"
+      - name: bucket-name
+        description: "Name of the bucket to delete"
+      - name: storage-type
+        description: "Type of storage (s3 or spaces)"
+        value: "spaces"
+      - name: region
+        description: "Storage region"
+        value: "nyc3"
+      - name: access-key-id
+        description: "Access key ID for the storage service"
+      - name: secret-access-key
+        description: "Secret access key for the storage service"
+      - name: endpoint-url
+        description: "Endpoint URL for the storage service (leave empty for AWS S3)"
+        value: "https://nyc3.digitaloceanspaces.com"
+      - name: force-delete
+        description: "Force delete bucket even if not empty (true/false)"
+        value: "true"
+
+  templates:
+    - name: main
+      steps:
+        - - name: empty-bucket
+            template: empty-bucket
+        - - name: delete-bucket
+            template: delete-bucket
+
+    - name: empty-bucket
+      script:
+        image: amazon/aws-cli:2.11.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+
+          BUCKET_NAME="{{workflow.parameters.bucket-name}}"
+          STORAGE_TYPE="{{workflow.parameters.storage-type}}"
+          ENDPOINT_URL="{{workflow.parameters.endpoint-url}}"
+          FORCE_DELETE="{{workflow.parameters.force-delete}}"
+          STORAGE_REGION="{{workflow.parameters.region}}"
+
+          export AWS_ACCESS_KEY_ID="{{workflow.parameters.access-key-id}}"
+          export AWS_SECRET_ACCESS_KEY="{{workflow.parameters.secret-access-key}}"
+          export AWS_DEFAULT_REGION="$STORAGE_REGION"
+
+          echo "Emptying bucket: $BUCKET_NAME"
+
+          ENDPOINT_ARGS=""
+          if [ "$STORAGE_TYPE" = "spaces" ] && [ -n "$ENDPOINT_URL" ]; then
+            ENDPOINT_ARGS="--endpoint-url=$ENDPOINT_URL"
+          fi
+
+          if ! aws s3 ls "s3://$BUCKET_NAME" $ENDPOINT_ARGS >/dev/null 2>&1; then
+            echo "Bucket $BUCKET_NAME does not exist"
+            exit 0
+          fi
+
+          if [ "$FORCE_DELETE" = "true" ]; then
+            echo "Removing all objects from bucket"
+            aws s3 rm "s3://$BUCKET_NAME" --recursive $ENDPOINT_ARGS || true
+
+            if [ "$STORAGE_TYPE" != "spaces" ]; then
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" $ENDPOINT_ARGS --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | \
+              while read -r key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" $ENDPOINT_ARGS || true
+                fi
+              done
+
+              aws s3api list-object-versions --bucket "$BUCKET_NAME" $ENDPOINT_ARGS --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | \
+              while read -r key version; do
+                if [ -n "$key" ] && [ -n "$version" ]; then
+                  aws s3api delete-object --bucket "$BUCKET_NAME" --key "$key" --version-id "$version" $ENDPOINT_ARGS || true
+                fi
+              done
+            else
+              echo "Skipping version cleanup for Spaces (versioning not supported)"
+            fi
+          else
+            OBJECT_COUNT=$(aws s3 ls "s3://$BUCKET_NAME" --recursive $ENDPOINT_ARGS | wc -l)
+            if [ "$OBJECT_COUNT" -gt 0 ]; then
+              echo "Bucket is not empty ($OBJECT_COUNT objects). Use force-delete=true to empty it."
+              exit 1
+            fi
+          fi
+
+          echo "Bucket $BUCKET_NAME emptied"
+
+    - name: delete-bucket
+      script:
+        image: amazon/aws-cli:2.11.0
+        command: [bash]
+        source: |
+          #!/bin/bash
+          set -e
+
+          BUCKET_NAME="{{workflow.parameters.bucket-name}}"
+          STORAGE_TYPE="{{workflow.parameters.storage-type}}"
+          ENDPOINT_URL="{{workflow.parameters.endpoint-url}}"
+          STORAGE_REGION="{{workflow.parameters.region}}"
+
+          export AWS_ACCESS_KEY_ID="{{workflow.parameters.access-key-id}}"
+          export AWS_SECRET_ACCESS_KEY="{{workflow.parameters.secret-access-key}}"
+          export AWS_DEFAULT_REGION="$STORAGE_REGION"
+
+          echo "Deleting bucket: $BUCKET_NAME"
+
+          ENDPOINT_ARGS=""
+          if [ "$STORAGE_TYPE" = "spaces" ] && [ -n "$ENDPOINT_URL" ]; then
+            ENDPOINT_ARGS="--endpoint-url=$ENDPOINT_URL"
+          fi
+
+          if aws s3 rb "s3://$BUCKET_NAME" --force $ENDPOINT_ARGS; then
+            echo "Bucket $BUCKET_NAME deleted successfully"
+          else
+            echo "Failed to delete bucket $BUCKET_NAME"
+            exit 1
+          fi
+
+          echo "Storage deprovisioning completed successfully"
+          echo "- Bucket: $BUCKET_NAME (deleted)"
+          echo "- Type: $STORAGE_TYPE"
+          echo "- Region: $STORAGE_REGION"
+          if [ -n "$ENDPOINT_URL" ]; then
+            echo "- Endpoint: $ENDPOINT_URL"
+          fi
+          echo "- Namespace: {{workflow.parameters.namespace}}"

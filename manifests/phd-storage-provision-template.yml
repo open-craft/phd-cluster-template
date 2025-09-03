@@ -1,0 +1,165 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterWorkflowTemplate
+metadata:
+  name: storage-provision-template
+spec:
+  serviceAccountName: workflow-executor
+  entrypoint: main
+  volumes:
+    - name: service-account-token
+      secret:
+        secretName: workflow-executor-token
+  podGC:
+    strategy: OnWorkflowSuccess
+    deleteDelayDuration: 24h
+  arguments:
+    parameters:
+      - name: namespace
+        description: "Target namespace for deployment"
+      - name: bucket-name
+        description: "Name of the bucket to create"
+      - name: storage-type
+        description: "Type of storage (s3 or spaces)"
+        value: "spaces"
+      - name: region
+        description: "Storage region"
+        value: "nyc3"
+      - name: access-key-id
+        description: "Access key ID for the storage service"
+      - name: secret-access-key
+        description: "Secret access key for the storage service"
+      - name: endpoint-url
+        description: "Endpoint URL for the storage service (leave empty for AWS S3)"
+        value: "https://nyc3.digitaloceanspaces.com"
+      - name: make-public
+        description: "Whether to make the bucket public (true/false)"
+        value: "false"
+
+  templates:
+    - name: main
+      steps:
+        - - name: create-bucket
+            template: create-bucket
+        - - name: configure-bucket
+            template: configure-bucket
+
+    - name: create-bucket
+      script:
+        image: amazon/aws-cli:2.13.23
+        command: [sh]
+        volumeMounts:
+          - name: service-account-token
+            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
+            readOnly: true
+        source: |
+          #!/bin/sh
+          set -e
+
+          BUCKET_NAME="{{workflow.parameters.bucket-name}}"
+          STORAGE_TYPE="{{workflow.parameters.storage-type}}"
+          STORAGE_REGION="{{workflow.parameters.region}}"
+          ENDPOINT_URL="{{workflow.parameters.endpoint-url}}"
+
+          export AWS_ACCESS_KEY_ID="{{workflow.parameters.access-key-id}}"
+          export AWS_SECRET_ACCESS_KEY="{{workflow.parameters.secret-access-key}}"
+          export AWS_DEFAULT_REGION="$STORAGE_REGION"
+
+          echo "Creating bucket: $BUCKET_NAME"
+          echo "Using storage type: $STORAGE_TYPE"
+          echo "Using region: $STORAGE_REGION"
+
+          ENDPOINT_ARGS=""
+          if [ "$STORAGE_TYPE" = "spaces" ] && [ -n "$ENDPOINT_URL" ]; then
+            ENDPOINT_ARGS="--endpoint-url=$ENDPOINT_URL"
+          fi
+
+          # Check if bucket exists
+          if aws s3 ls $ENDPOINT_ARGS | grep -q "$BUCKET_NAME"; then
+            echo "Bucket $BUCKET_NAME already exists"
+            exit 0
+          fi
+
+          # Create bucket
+          aws s3 mb "s3://$BUCKET_NAME" $ENDPOINT_ARGS
+          if [ $? -eq 0 ]; then
+            echo "Bucket $BUCKET_NAME created successfully"
+          else
+            echo "Failed to create bucket $BUCKET_NAME"
+            exit 1
+          fi
+
+    - name: configure-bucket
+      script:
+        image: amazon/aws-cli:2.13.23
+        command: [sh]
+        volumeMounts:
+          - name: service-account-token
+            mountPath: "/var/run/secrets/kubernetes.io/serviceaccount"
+            readOnly: true
+        source: |
+          #!/bin/sh
+          set -e
+
+          BUCKET_NAME="{{workflow.parameters.bucket-name}}"
+          STORAGE_TYPE="{{workflow.parameters.storage-type}}"
+          STORAGE_REGION="{{workflow.parameters.region}}"
+          MAKE_PUBLIC="{{workflow.parameters.make-public}}"
+          ENDPOINT_URL="{{workflow.parameters.endpoint-url}}"
+
+          echo "Configuring bucket: $BUCKET_NAME"
+
+          export AWS_ACCESS_KEY_ID="{{workflow.parameters.access-key-id}}"
+          export AWS_SECRET_ACCESS_KEY="{{workflow.parameters.secret-access-key}}"
+          export AWS_DEFAULT_REGION="$STORAGE_REGION"
+
+          ENDPOINT_ARGS=""
+          if [ "$STORAGE_TYPE" = "spaces" ] && [ -n "$ENDPOINT_URL" ]; then
+            ENDPOINT_ARGS="--endpoint-url=$ENDPOINT_URL"
+          fi
+
+          # Only enable versioning for AWS S3 (not supported by DigitalOcean Spaces)
+          if [ "$STORAGE_TYPE" != "spaces" ]; then
+            echo "Enabling versioning for S3 bucket"
+            aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" $ENDPOINT_ARGS --versioning-configuration Status=Enabled || echo "Warning: Failed to enable versioning"
+          else
+            echo "Skipping versioning for DigitalOcean Spaces (not supported)"
+          fi
+
+          # Make bucket public if requested
+          if [ "$MAKE_PUBLIC" = "true" ]; then
+            if [ "$STORAGE_TYPE" = "spaces" ]; then
+              echo "Warning: Making Spaces buckets public is not managed by this workflow. Configure access manually if needed."
+            else
+              echo "Making S3 bucket public"
+              aws s3api put-public-access-block \
+                --bucket "$BUCKET_NAME" \
+                $ENDPOINT_ARGS \
+                --public-access-block-configuration \
+                BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false || echo "Warning: Failed to configure public access block"
+
+              POLICY='{
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Sid": "PublicReadGetObject",
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Action": "s3:GetObject",
+                    "Resource": "arn:aws:s3:::'"$BUCKET_NAME"'/*"
+                  }
+                ]
+              }'
+
+              aws s3api put-bucket-policy \
+                --bucket "$BUCKET_NAME" \
+                $ENDPOINT_ARGS \
+                --policy "$POLICY" || echo "Warning: Failed to set bucket policy"
+            fi
+          fi
+
+          echo "Storage provisioning completed successfully"
+          echo "- Bucket: $BUCKET_NAME"
+          echo "- Type: $STORAGE_TYPE"
+          echo "- Region: $STORAGE_REGION"
+          echo "- Public: $MAKE_PUBLIC"
+          echo "- Namespace: {{workflow.parameters.namespace}}"

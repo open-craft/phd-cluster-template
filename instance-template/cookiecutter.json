@@ -1,0 +1,21 @@
+{
+  "instance_name": "demo",
+  "instance_slug": "{{ cookiecutter.instance_name.lower().replace(' ', '-') }}",
+  "instance_domain": "{{ cookiecutter.instance_slug.lower().replace('_', '-') + '.' + (env('PHD_CLUSTER_DOMAIN') or 'example.com') }}",
+  "environment": "{{ env('PHD_ENVIRONMENT') or 'production' }}",
+  "platform_description": "Open edX Instance for {{ cookiecutter.instance_name }}",
+  "platform_repository": "https://github.com/openedx/edx-platform.git",
+  "platform_version": "release/teak",
+  "tutor_version": "v20.0.2",
+  "cluster_repository": "",
+  "cluster_repository_branch": "main",
+  "cluster_repository_owner": "",
+  "cluster_repository_name": "",
+  "docker_registry": "{{ env('PHD_DOCKER_REGISTRY') or 'ghcr.io' }}",
+  "docker_registry_credentials": "{{ env('PHD_DOCKER_REGISTRY_CREDENTIALS') or '' }}",
+  "_extensions": [
+    "extensions.EnvVarExtension",
+    "extensions.PasswordExtension",
+    "extensions.StorageExtension"
+  ]
+}

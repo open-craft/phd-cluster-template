@@ -1,0 +1,200 @@
+name: Build Service Image
+
+on:
+  workflow_call:
+    inputs:
+      INSTANCE_NAME:
+        description: "Instance to build"
+        required: true
+        type: string
+      SERVICE:
+        description: "Service to build"
+        required: true
+        type: string
+      STRAIN_REPOSITORY:
+        description: "Repository containing the cluster/strains"
+        required: true
+        type: string
+      STRAIN_REPOSITORY_BRANCH:
+        description: "Branch to clone the strain from"
+        required: true
+        type: string
+      TUTOR_VERSION:
+        description: "Version of the tutor to use"
+        required: true
+        type: string
+      PICASSO_VERSION:
+        description: "Picasso version"
+        required: true
+        type: string
+      PHD_CLI_VERSION:
+        description: "PHD CLI version"
+        required: true
+        type: string
+      RUNNER_WORKFLOW_LABEL:
+        description: "The label of the runner workflow to run"
+        required: false
+        type: string
+        default: "ubuntu-latest"
+    outputs:
+      image_name:
+        description: "Full image name (repo/name:tag)"
+        value: ${{ jobs.build.outputs.image_name }}
+      image_tag:
+        description: "Image tag only"
+        value: ${{ jobs.build.outputs.image_tag }}
+    secrets:
+      SSH_PRIVATE_KEY:
+        description: "Private SSH key for accessing private repositories"
+        required: true
+
+
+jobs:
+  build:
+    name: Build Service
+    uses: open-craft/phd-cluster-template/.github/workflows/build-service.yml@main
+    permissions:
+      packages: write
+      contents: read
+    concurrency:
+      group: ${{ inputs.STRAIN_REPOSITORY }}:${{ inputs.STRAIN_REPOSITORY_BRANCH }}:${{ inputs.INSTANCE_NAME }}:${{ inputs.SERVICE }}
+      cancel-in-progress: false
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    with:
+      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
+      SERVICE: ${{ inputs.SERVICE }}
+      STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
+      STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
+      TUTOR_VERSION: ${{ inputs.TUTOR_VERSION }}
+      PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
+      PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
+      RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+
+  generate-env-dir:
+    needs:
+      - build
+    name: Generate Environment Directory
+    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@main
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    with:
+      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
+      SERVICE: ${{ inputs.SERVICE }}
+      IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+      STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
+      STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
+      TUTOR_VERSION: ${{ inputs.TUTOR_VERSION }}
+      PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
+      PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
+      RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+
+  commit-and-push:
+    needs:
+      - build
+      - generate-env-dir
+    runs-on: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+    concurrency:
+      group: ${{ inputs.STRAIN_REPOSITORY }}:${{ inputs.STRAIN_REPOSITORY_BRANCH }}:${{ inputs.INSTANCE_NAME }}:${{ inputs.SERVICE }}
+      cancel-in-progress: false
+    steps:
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add GitHub to known hosts
+        run: ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Checkout cluster repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.STRAIN_REPOSITORY }}
+          ref: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
+          fetch-depth: 0
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Checkout workflow scripts
+        uses: actions/checkout@v4
+        with:
+          repository: open-craft/phd-cluster-template
+          ref: main
+          path: workflow-scripts
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: 'pip'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Download env artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tutor-env-${{ inputs.INSTANCE_NAME }}
+          path: instances/${{ inputs.INSTANCE_NAME }}/env
+
+      - name: Update config.yml with image tag
+        env:
+          CONFIG_FILE: instances/${{ inputs.INSTANCE_NAME }}/config.yml
+          SERVICE: ${{ inputs.SERVICE }}
+          IMAGE_NAME: ${{ needs.build.outputs.image_name }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          SCRIPT_PATH: workflow-scripts/.github/workflows/scripts/update_config_image.py
+        run: |
+          python "$SCRIPT_PATH" \
+            --config-file "$CONFIG_FILE" \
+            --service "$SERVICE" \
+            --image-name "$IMAGE_NAME" \
+            --image-tag "$IMAGE_TAG"
+
+      - name: Commit and push changes
+        env:
+          INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
+          SERVICE: ${{ inputs.SERVICE }}
+          IMAGE_NAME: ${{ needs.build.outputs.image_name }}
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
+          SCRIPT_PATH: workflow-scripts/.github/workflows/scripts/update_config_image.py
+          CONFIG_FILE: instances/${{ inputs.INSTANCE_NAME }}/config.yml
+        run: |
+          set -euo pipefail
+
+          git add instances/$INSTANCE_NAME/config.yml
+          git add instances/$INSTANCE_NAME/env
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: update $SERVICE image and tutor config for $INSTANCE_NAME"
+
+          for i in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            sleep $((i*i))
+            git pull origin "$BRANCH" --rebase
+            # Re-apply the config update on top of latest base in case of rebase changes
+            python "$SCRIPT_PATH" \
+              --config-file "$CONFIG_FILE" \
+              --service "$SERVICE" \
+            --image-name "$IMAGE_NAME" \
+            --image-tag "$IMAGE_TAG"
+            git add instances/$INSTANCE_NAME/config.yml
+            git add instances/$INSTANCE_NAME/env
+            if git diff --cached --quiet; then
+              echo "No additional changes after rebase"
+            else
+              git commit -m "chore: update $SERVICE image and tutor config for $INSTANCE_NAME (retry $i)" || true
+            fi
+          done
+          exit 1
