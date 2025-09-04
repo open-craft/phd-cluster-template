@@ -11,9 +11,35 @@
     "cluster_slug": {
       "type": "string"
     },
+    "cluster_vpc_ip_range": {
+      "type": "string"
+    },
     "cloud_provider": {
       "enum": ["aws", "digitalocean"]
+    },
+    "harmony_version": {
+      "type": "string"
+    },
+    "letsencrypt_email": {
+      "type": "string"
+    },
+    "picasso_version": {
+      "type": "string"
+    },
+    "default_buildkit_max_parallelism": {
+      "type": "number"
     }
   },
-  "required": ["$schema", "cluster_name", "cluster_slug", "cloud_provider"]
+  "required": [
+    "$schema",
+    "cluster_name",
+    "cluster_slug",
+    "cluster_vpc_ip_range",
+    "cloud_provider",
+    "harmony_version",
+    "letsencrypt_email",
+    "picasso_version",
+    "default_buildkit_max_parallelism"
+  ],
+  "additionalProperties": false
 }
