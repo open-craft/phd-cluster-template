@@ -367,7 +367,7 @@
     "harmony_version",
     "letsencrypt_email",
     "picasso_version",
-    "buildkit_parallelism"
+    "default_buildkit_parallelism"
   ],
   "additionalProperties": false,
   "examples": [
@@ -388,7 +388,7 @@
       "harmony_version": "bfdcca60d62801acbf61e77f49de25889647b5ef",
       "letsencrypt_email": "admin@example.com",
       "picasso_version": "main",
-      "buildkit_parallelism": 3,
+      "default_buildkit_parallelism": 3,
       "$schema": "./cookiecutter.schema.json"
     }
   ]
