@@ -49,6 +49,33 @@
         "Development and testing environment"
       ]
     },
+    "kubernetes_version": {
+      "type": "string",
+      "anyOf": [
+        {
+          "if": {
+            "properties": {
+              "cloud_provider": { "const": "aws" }
+            }
+          },
+          "then": {
+            "enum": ["1.31", "1.32", "1.33"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cloud_provider": { "const": "digitalocean" }
+            }
+          },
+          "then": {
+            "enum": ["1.31.39-do.3", "1.32.5-do.3", "1.33.1-do.3"]
+          }
+        }
+      ],
+      "description": "Kubernetes version",
+      "examples": ["1.31", "1.32", "1.33", "1.31.39-do.3", "1.32.5-do.3", "1.33.1-do.3"]
+    },
     "cluster_vpc_ip_range": {
       "type": "string",
       "description": "CIDR block for the cluster's VPC network",
@@ -367,7 +394,7 @@
     "harmony_version",
     "letsencrypt_email",
     "picasso_version",
-    "default_buildkit_parallelism"
+    "buildkit_parallelism"
   ],
   "additionalProperties": false,
   "examples": [
@@ -388,7 +415,7 @@
       "harmony_version": "bfdcca60d62801acbf61e77f49de25889647b5ef",
       "letsencrypt_email": "admin@example.com",
       "picasso_version": "main",
-      "default_buildkit_parallelism": 3,
+      "buildkit_parallelism": 3,
       "$schema": "./cookiecutter.schema.json"
     }
   ]
