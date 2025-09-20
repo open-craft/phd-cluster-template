@@ -1,0 +1,60 @@
+# This configuration will be updated by Picasso, therefore the formatting will
+# be completely lost. Therefore, spending time on formatting is not worth it.
+
+# Docker configuration
+MFE_DOCKER_IMAGE: 466538543953.dkr.ecr.eu-central-1.amazonaws.com/phd-experiment-6888bd00add5eb8ac6bb3199:v20.0.0-20250806-er3gyoiz
+DOCKER_IMAGE_OPENEDX: 466538543953.dkr.ecr.eu-central-1.amazonaws.com/phd-experiment-6888bd00add5eb8ac6bb3199:v20.0.0-20250806-ia7o0t4b
+DOCKER_IMAGE_OPENEDX_DEV: 466538543953.dkr.ecr.eu-central-1.amazonaws.com/phd-experiment-6888bd00add5eb8ac6bb3199:teak-demo-dev
+DOCKER_REGISTRY: 466538543953.dkr.ecr.eu-central-1.amazonaws.com
+DRYDOCK_INIT_JOBS: true
+DRYDOCK_REGISTRY_CREDENTIALS: '{"auths": {"466538543953.dkr.ecr.eu-central-1.amazonaws.com":
+  {"auth": "QVdTOmV5SndZWGxzYjJGa0lqb2lPSFl3VUhGU2JWaHFTV3BUV1hoTVFqaFdUVlpWVm5SSGRtczBWVWx4VEcxT1FVNWhkMDFQVnpKeVdXWnhOVXMxU2xGaE1HZExPQ3RLTW5adlRHZGpWMGg0TWtSdUszSXZXVkZOWXpNM2JHTXlhbUV2WWpCTWMwMTJNemxOTTFreVFVaG9VblpWTUhVMVNETTNZbk5yTDJVclJqVkVWWHBMU25aT2JXOWtTbVZTVjNoVmFtZHhjalprU0VSMGRqTTVhRElyUmpSbmMyRXdXVVZsZUVOR2VVVkZhaXQ1YTJOV2NYSTJTVnBtVDB0Q1owOWtaRmRRWlhGcWJXNXpjWFZ5VFdwaldWRTROMmd5TUVoeGVIUktTRUpDZGtOMWVtdHhOVVYzYVZkbVVYTXplVzEzT1hKQmVtZzVWVEl3VjBkc1ExWlFkVGhSUWl0dlJqSTVhV28wZDJFM1ZXWlVhM1JXV1Vobll6SlRkbGhKU2tGSWR6bFhNa2h4WWs1dlJrRTRUM2x2ZWxZNFNFSjZUR1k0Y0d0NGNtTkpiSFE1ZWk5dVVrUXpWVk5ZTm5SUllVMW9jM0ZXTDA0eVlrOVRaREZWT1dJMFpqTlBRbGd3VERCM2VIUmthV0pqWXpsSldtVkhjVFJEVFN0dGQxa3dUVTVMYzNkVFJIbzBRWEJhY0ZkMlVUVlVPREJ6Vkc0M1VuQnVSR041ZERabGRsUkxaV05yYUUxVFF6WnlLeXROWnpCTWFXRldZbGR3UXpkS1RubFJXbmRFYjBaTVNFeFROQzluTTNKTUx5OU5TMlZhVEZwS2JWVm1UVU5RYUdGelRXaHBUV1Z3ZWpFdlRtVjJNVUk0UTFkUFpua3dLMDV1VFN0d2NrNDFhVUUwU1daSEwyNU1VMFpqVDNvMWF6ZGxlV3RSY2xWcVNFSTFXRkYyTldGeWNUQTNkM1JJTm01RldtTllSVVkxWjBwM05XbHhZbXBxUzJJd0swZFFSemxCYVRGa05HUm9RMGw0YkV0c05XbHVNVWd4YjFBelNVc3pielY2WTFsbmNVRXpRWEZaV2pkeWVHTjVZMGQ0ZUROa05FNXNla3hzUkRodFZscDRibFpUZDA5cVlsTjBPVVJOWTBKbWFteE9NbUV4Y0RWVFVtbHlUbWsyTkZocmFYbE1kWEIzT1ZGaU5tSk5ORXR3YURGRGFHZHVXbVpNTmpSd1MwOHpXbUZ5WmtkbVVVbDFMeXN6TW1OMGRrYzRlVzlMZG1KRGJqVktjbUZLU25ka1EwNWxUblJZZFZGSE1WbEVVVlJhYmpFM1JGa3dlQzk0VUVWMFNFRnJObGxqYzBFMlFVMUZSMFZrTVdKbk5FaFVNemxuWVZGVFF6Y3ljMkV4UVVsdkswTk5jVVY2UXpnMVZUTnFXVTFSWlV0WGFIcDRNMjVDZVdkTGFsRk5RalZVZWpkQk5WUkRNRzlRTWtwaGNFSklLMEVyU21vMVVYQmxWV2RMTlZKWU1YZ3dRMGhvWTJOWU1YZDFiVGhTY25OaWQzbEtSWFowVlZneVZWVnFkRmxKYW1OaFRYY3paMEowYjNOc1NUQkxkVTVMVkZCU2JFeGtNWGx1WmxweWJHeFFkV292VVhsR1JYQjJSbmxTY2pOelRXeENOUzk1VUhreFVVUXpXbk5FVlZaaVJrMUNhVEZTTVRSV1ZsQnZSbXRGVlRKNFpqVk5iMnRvTDNabGRpdFVhRlY1TVRGa2RXTkpSbU0zV1M5dlFWZHVZVWt4ZEdWNVNqaEdibmxzTDA1eVptUlRWMWsyU2pWT2IxVmtRWEZpTWt0UU1uUnBZWEZaU1ZVOUlpd2laR0YwWVd0bGVTSTZJa0ZSUlVKQlNHZ3plbGxQWkhSd1FrSlRWbmN2V1RKaGJqaENXRWxFTkd0M1RGRm1ibTlVYWpWNmQxcDBSMHBhYjFwUlFVRkJTRFIzWmtGWlNrdHZXa2xvZG1OT1FWRmpSMjlIT0hkaVVVbENRVVJDYjBKbmEzRm9hMmxIT1hjd1FrSjNSWGRJWjFsS1dVbGFTVUZYVlVSQ1FVVjFUVUpGUlVSS1dtVkZhVzl5TkhsWWVWWmlhM0ZqUVVsQ1JVbEJOM1o2Um1Vek1GQm5VRzlDWjA5UmFXdGlkV04wYm1Rd1puZ3JPRXhEVmtKWlEyeFVPVFJSVVRCbmF6WTVRVWR5VnpSaWRIaG5RWFpCY2tWMlNtZzBXVEp1ZGpNd2JIZHpLM0JaTVV0WmVFVTlJaXdpZG1WeWMybHZiaUk2SWpJaUxDSjBlWEJsSWpvaVJFRlVRVjlMUlZraUxDSmxlSEJwY21GMGFXOXVJam94TnpVME5URXhORGd3ZlE9PQ=="}}}'
+
+# Tutor configuration
+K8S_NAMESPACE: teak-demo
+TUTOR_APP_NAME: teak-demo
+TUTOR_VERSION: v20.0.0
+
+# Open edX configuration
+PLATFORM_NAME: Picasso Harmony Drydock Experimentation
+EDX_PLATFORM_REPOSITORY: https://github.com/openedx/edx-platform.git
+EDX_PLATFORM_VERSION: release/teak
+OPENEDX_EXTRA_PIP_REQUIREMENTS:
+- git+https://github.com/eduNEXT/eox-tenant@v14.0.0
+- cssselect==1.2.0
+- h5p-xblock==0.2.17
+- openedx-scorm-xblock==19.0.2
+- xblock-free-text-response==4.1.0
+- xblock-submit-and-compare==3.1.0
+- xblock-image-explorer==3.0.2
+- edx-sga==0.26.0
+
+# Ingress and HTTP configuration
+ENABLE_HTTPS: true
+ENABLE_WEB_PROXY: false
+LMS_HOST: teak-demo.phd.opencraft.hosting
+CMS_HOST: studio.teak-demo.phd.opencraft.hosting
+PREVIEW_LMS_HOST: preview.teak-demo.phd.opencraft.hosting
+
+# Picasso configuration
+PICASSO_EXTRA_COMMANDS:
+- pip install tutor-contrib-drydock
+- tutor plugins index add https://raw.githubusercontent.com/eduNEXT/tutor-plugin-indexes/teak/
+- tutor plugins install forum mfe mfe-extensions sentry
+- tutor plugins enable drydock forum mfe mfe-extensions sentry
+- tutor picasso enable-themes
+- tutor picasso enable-private-packages
+- tutor config save
+
+PICASSO_THEMES:
+- name: ednx-saas-themes
+  repo: git@github.com:eduNEXT/ednx-saas-themes.git
+  version: edunext/teak.master
+
+PICASSO_THEMES_NAME:
+- bragi
+- css-runtime
+
+PICASSO_THEME_DIRS:
+- /openedx/themes/ednx-saas-themes/edx-platform
+- /openedx/themes/ednx-saas-themes/edx-platform/bragi-children

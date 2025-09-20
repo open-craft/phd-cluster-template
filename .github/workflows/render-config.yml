@@ -1,0 +1,44 @@
+name: PHD Instance Creator
+
+on:
+  workflow_call:
+    inputs:
+      INSTANCE_NAME:
+        description: "Instance to create"
+        type: string
+      PLATFORM_NAME:
+        description: "Platform name"
+        default: "My Open edX Instance"
+        type: string
+      EDX_PLATFORM_REPOSITORY:
+        description: "Repository to clone the edx-platform from"
+        default: "https://github.com/openedx/edx-platform.git"
+        type: string
+      EDX_PLATFORM_VERSION:
+        description: "Version of the edx-platform to use"
+        default: "release/teak"
+        type: string
+      TUTOR_VERSION:
+        description: "Version of the tutor to use"
+        default: "v20.0.1"
+        type: string
+      RUNNER_WORKFLOW_LABEL:
+        description: 'The label of the runner workflow to run'
+        required: false
+        type: string
+        default: 'ubuntu-24.04'
+
+jobs:
+  render-config:
+    runs-on: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repository for helper scripts
+        uses: actions/checkout@v4
+
+      - name: Render Config
+        run: |
+          ls -lah

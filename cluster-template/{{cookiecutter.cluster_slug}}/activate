@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# DO NOT RUN THIS FILE DIRECTLY; IT IS INTENTIONALLY NOT EXECUTABLE.
+# TO USE THIS FILE SOURCE THE CONTENT OF IT BY EXECUTING "source activate".
+
+pushd . > '/dev/null';
+INFRA_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]:-$0}")/infrastructure");
+
+REMOTE_SCRIPTS_VERSION="${REMOTE_SCRIPTS_VERSION:-main}"
+REMOTE_SCRIPTS_DIR_URL="https://raw.githubusercontent.com/opencraft/phd-cluster-template/${REMOTE_SCRIPTS_VERSION}/scripts"
+
+function deactivate() {
+  export KUBECONFIG="${_OLD_KUBECONFIG:-}"
+  unset _OLD_KUBECONFIG
+}
+
+################################################################################
+# Configure Kubernetes access
+################################################################################
+
+# Set the _OLD_KUBECONFIG only if not set
+[[ -z "${_OLD_KUBECONFIG:-}" ]] && export _OLD_KUBECONFIG="${KUBECONFIG:-}"
+
+# shellcheck disable=SC2155
+export KUBECONFIG="${INFRA_DIR}/.kubeconfig"
+
+################################################################################
+# Load remote PHD helper scripts
+################################################################################
+
+echo "Loading PHD helper scripts from $REMOTE_SCRIPTS_DIR_URL..."
+
+# shellcheck disable=SC1090
+source <(curl -sSL "$REMOTE_SCRIPTS_DIR_URL/phd-commands.sh")

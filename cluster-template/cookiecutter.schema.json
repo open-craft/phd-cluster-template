@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PHD Cluster Template Configuration",
+  "description": "Configuration schema for generating Open edX Kubernetes cluster infrastructure using Terraform",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for validation",
+      "example": "./cookiecutter.schema.json"
+    },
+    "cluster_name": {
+      "type": "string",
+      "description": "Human-readable name for the Kubernetes cluster",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[a-zA-Z0-9\\s\\-_]+$",
+      "examples": [
+        "PHD Production Cluster",
+        "Open edX Staging Environment",
+        "Development Test Cluster"
+      ]
+    },
+    "cluster_slug": {
+      "type": "string",
+      "description": "URL-safe identifier for the cluster (auto-generated from cluster_name)",
+      "pattern": "^[a-z][a-z0-9\\-_]+$|^\\{\\{.*\\}\\}$",
+      "examples": [
+        "phd-production-cluster",
+        "openedx-staging-environment",
+        "development-test-cluster",
+        "{{ cookiecutter.cluster_name.lower().replace(' ', '-') }}"
+      ]
+    },
+    "cluster_domain": {
+      "type": "string",
+      "description": "Domain name for the cluster (auto-generated from cluster_slug)",
+      "pattern": "^[a-z0-9\\-\\.]+$|^\\{\\{.*\\}\\}$",
+      "examples": [
+        "phd-production-cluster.example.com",
+        "openedx-staging-environment.example.com",
+        "development-test-cluster.example.com",
+        "{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}.example.com"
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["production", "staging", "development"],
+      "description": "Deployment environment type",
+      "examples": ["production"]
+    },
+    "short_description": {
+      "type": "string",
+      "description": "Brief description of the cluster's purpose",
+      "minLength": 10,
+      "maxLength": 100,
+      "examples": [
+        "Kubernetes cluster to host Open edX instances",
+        "Production environment for online learning platform",
+        "Development and testing environment"
+      ]
+    },
+    "cloud_provider": {
+      "type": "string",
+      "enum": ["aws", "digitalocean"],
+      "description": "Cloud provider for infrastructure deployment",
+      "examples": ["aws"]
+    },
+    "harmony_module_version": {
+      "type": "string",
+      "description": "Open edX Harmony Terraform module version (git commit hash or tag)",
+      "pattern": "^[a-f0-9]{40}$|^[a-zA-Z0-9\\-_\\.]+$",
+      "examples": [
+        "bfdcca60d62801acbf61e77f49de25889647b5ef",
+        "main",
+        "v1.0.0"
+      ]
+    },
+    "picasso_version": {
+      "type": "string",
+      "description": "Picasso build system version (git branch, tag, or commit)",
+      "examples": ["main", "develop", "v2.1.0", "abc123def456"]
+    },
+    "phd_cluster_template_version": {
+      "type": "string",
+      "description": "PHD cluster template version (git branch, tag, or commit)",
+      "examples": ["main", "develop", "v1.0.0", "abc123def456"]
+    },
+    "buildkit_parallelism": {
+      "type": "string",
+      "description": "Number of layers to build at the same time in Docker BuildKit",
+      "pattern": "^[0-9]+$",
+      "examples": [
+        "4",
+        "8",
+        "16"
+      ]
+    }
+  },
+  "required": [
+    "$schema",
+    "cluster_name",
+    "cluster_slug",
+    "cluster_domain",
+    "environment",
+    "short_description",
+    "cloud_provider",
+    "harmony_module_version",
+    "picasso_version",
+    "buildkit_parallelism"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "cluster_name": "PHD Production Cluster",
+      "cluster_slug": "{{ cookiecutter.cluster_name.lower().replace(' ', '-') }}",
+      "cluster_domain": "{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}.example.com",
+      "environment": "production",
+      "short_description": "Kubernetes cluster to host Open edX instances",
+      "cloud_provider": "aws",
+      "harmony_module_version": "bfdcca60d62801acbf61e77f49de25889647b5ef",
+      "picasso_version": "main",
+      "buildkit_parallelism": "4",
+      "$schema": "./cookiecutter.schema.json"
+    }
+  ]
+}

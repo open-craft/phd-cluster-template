@@ -1,0 +1,138 @@
+# Simple working Argo Server with basic authentication
+# Based on official documentation: https://argo-workflows.readthedocs.io/en/latest/argo-server/#hosted-mode
+
+---
+# Clean workflow controller config (remove problematic SSO config)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-controller-configmap
+  namespace: argo
+data:
+  # Basic configuration
+  workflowDefaults: |
+    spec:
+      serviceAccountName: workflow-executor
+      podGC:
+        strategy: OnPodCompletion
+  # Links to other services
+  links: |
+    - name: ArgoCD
+      scope: workflow
+      url: https://argocd.phd.opencraft.hosting/applications
+
+---
+# Local user accounts for authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argo-server-sso
+  namespace: argo
+type: Opaque
+stringData:
+  # Admin user - same password as ArgoCD: nbKlids19qn6U8xW
+  accounts.admin.enabled: "true"
+  accounts.admin.password: "$2a$10$qzEmVzdhS.EgpQTsysMS.OBZZJJKACHyVFVEB8JOpy17piOBxEc/C"
+  accounts.admin.tokens: ""
+  # Developer user - password: developer123
+  accounts.developer.enabled: "true"
+  accounts.developer.password: "$2a$10$MGCKvWUIotGqOjQYrBInyudgA/InCS3AAPYDQEtLP/ZG8vC9hPR.K"
+  accounts.developer.tokens: ""
+
+---
+# RBAC policy for authorization
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-server-rbac-config
+  namespace: argo
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    # Role definitions
+    p, role:admin, *, *, *, allow
+    p, role:developer, workflows, *, *, allow
+    p, role:developer, workflow-templates, *, *, allow
+    p, role:developer, cluster-workflow-templates, get, *, allow
+    p, role:developer, events, get, *, allow
+    p, role:developer, logs, get, *, allow
+    p, role:readonly, workflows, get, *, allow
+    p, role:readonly, workflow-templates, get, *, allow
+    p, role:readonly, cluster-workflow-templates, get, *, allow
+    p, role:readonly, events, get, *, allow
+    p, role:readonly, logs, get, *, allow
+
+    # User to role assignments
+    g, admin, role:admin
+    g, developer, role:developer
+    g, system:serviceaccount:argo:argo-server, role:admin
+
+---
+# Argo Server deployment with server auth mode
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-server
+  namespace: argo
+spec:
+  selector:
+    matchLabels:
+      app: argo-server
+  template:
+    metadata:
+      labels:
+        app: argo-server
+    spec:
+      serviceAccountName: argo-server
+      securityContext:
+        runAsNonRoot: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: argo-server
+        image: quay.io/argoproj/argocli:v3.7.1
+        command:
+        - argo
+        - server
+        - --auth-mode=server
+        - --secure
+        - --loglevel=info
+        ports:
+        - containerPort: 2746
+          name: web
+        env:
+        - name: ARGO_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: ARGO_BASE_HREF
+          value: /
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 2746
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 2746
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 8737
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: tmp
+        emptyDir: {}

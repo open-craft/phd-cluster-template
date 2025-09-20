@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ${TUTOR_APP_NAME}.kubernetes.default.svc
+  namespace: argocd
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ${TUTOR_APP_NAME}
+  project: phd-${ENVIRONMENT}
+  source:
+    path: instances/${TUTOR_APP_NAME}/env
+    repoURL: ${PHD_CLUSTER_REPOSITORY}
+    targetRevision: ${PHD_CLUSTER_REPOSITORY_BRANCH}
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    - PruneLast=true
