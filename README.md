@@ -56,19 +56,16 @@ phd-cluster-template/
 ├── .github/workflows/          # GitHub Actions workflows
 │   ├── create-instance.yml     # Instance creation workflow
 │   └── delete-instance.yml     # Instance deletion workflow
-└── requirements/               # Python dependencies
 ```
 
 ## Quick Start
 
 ### 1. Generate a Cluster
 
-```bash
-# Install cookiecutter
-pip install -r https://raw.githubusercontent.com/open-craft/phd-cluster-template/refs/heads/main/requirements/base.txt
+The easiest way to start setting up a cluster is using [`uv`](https://docs.astral.sh/uv/):
 
-# Generate cluster template
-cookiecutter https://github.com/open-craft/phd-cluster-template.git --directory cluster-template
+```bash
+uvx cookiecutter https://github.com/open-craft/phd-cluster-template.git --directory cluster-template
 ```
 
 ### 2. Set Up Infrastructure
