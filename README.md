@@ -235,11 +235,6 @@ Instance workflows are defined in separate YAML manifest files in the `manifests
 
 These manifests use template variables with the `PHD_INSTANCE_` prefix (e.g., `{{PHD_INSTANCE_NAME}}`, `{{PHD_INSTANCE_MYSQL_DATABASE}}`) and are applied using the `__phd_kubectl_apply_from_url` function, following the established pattern for remote manifest management.
 
-This is particularly useful when:
-- Fixing permission issues for existing users
-- Upgrading user access levels
-- Applying new permission policies
-
 ## Cloud Support
 
 ### DigitalOcean
@@ -262,13 +257,12 @@ The system supports multiple MongoDB providers with automatic detection:
 
 - **`mongodb_direct`**: Direct connection to any MongoDB (self-hosted, Atlas, managed DBs)
 - **`digitalocean_api`**: DigitalOcean API-based database management
-- **`atlas`**: MongoDB Atlas (uses mongodb_direct, API support planned)
 
 **Provider is automatically detected** based on your configuration.
 
 #### Quick Configuration
 
-**Self-hosted or DigitalOcean Managed (Recommended)**:
+**Self-hosted or MongoDB Atlas**:
 ```bash
 export PHD_MONGODB_HOST="mongodb.example.com"
 export PHD_MONGODB_PORT="27017"
@@ -276,20 +270,11 @@ export PHD_MONGODB_ADMIN_USER="admin"
 export PHD_MONGODB_ADMIN_PASSWORD="secure_password"
 ```
 
-**MongoDB Atlas**:
-```bash
-export PHD_MONGODB_HOST="cluster0.abc123.mongodb.net"
-export PHD_MONGODB_ADMIN_USER="atlas-admin"
-export PHD_MONGODB_ADMIN_PASSWORD="atlas_password"
-```
-
-**DigitalOcean via API** (optional):
+**DigitalOcean via API**:
 ```bash
 export PHD_MONGODB_CLUSTER_ID="abc12345-xyz67890"  # Forces API provider
 export PHD_DIGITALOCEAN_TOKEN="dop_v1_your_token"
 ```
-
-📖 **See [MONGODB_PROVIDERS.md](MONGODB_PROVIDERS.md) for detailed provider configuration, troubleshooting, and migration guide.**
 
 ### Storage Providers
 
@@ -297,7 +282,6 @@ The system automatically computes storage endpoint URLs based on provider type:
 
 - **DigitalOcean Spaces**: Automatic endpoint formatting (`https://{region}.digitaloceanspaces.com`)
 - **AWS S3**: Uses AWS default endpoints
-- **Extensible**: Easy to add new providers
 
 **Configuration**:
 ```bash
@@ -314,7 +298,6 @@ export PHD_STORAGE_SECRET_ACCESS_KEY="your_secret"
 - Generates instance configuration using cookiecutter
 - Applies provision workflows (MySQL, MongoDB, Storage)
 - Creates ArgoCD Application
-- Triggers deployment workflows
 
 ### Delete Instance Workflow
 - Deletes ArgoCD Application
@@ -330,13 +313,6 @@ export PHD_STORAGE_SECRET_ACCESS_KEY="your_secret"
 - `AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key pair for the Access Key ID
 - `AWS_REGION`: AWS Region
 - `SSH_PRIVATE_KEY`: SSH Private Key used to fetch private repositories
-
-### Setting Up Secrets
-
-```bash
-# From your cluster repository root
-phd_setup_github_secret your-org/your-cluster-repo
-```
 
 ## Troubleshooting
 
