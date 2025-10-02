@@ -1,9 +1,9 @@
 {
-  "environment": "production",
   "cluster_name": "PHD Production Cluster",
+  "short_description": "Kubernetes cluster to host Open edX instances",
+  "environment": "production",
   "cluster_slug": "{{ cookiecutter.cluster_name.lower().replace(' ', '-') }}",
   "cluster_domain": "{{ cookiecutter.cluster_slug.lower().replace('_', '-') + '.example.com' }}",
-  "short_description": "Kubernetes cluster to host Open edX instances",
   "cloud_provider": [
     "aws",
     "digitalocean"
@@ -17,5 +17,8 @@
     "https://github.com/{{ cookiecutter.git_organization }}/phd-{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}.git",
     "https://github.com/{{ cookiecutter.git_organization }}/phd-{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}-{{ cookiecutter.environment.lower().replace(' ', '-') }}.git",
     "https://github.com/{{ cookiecutter.git_organization }}/{{ cookiecutter.cluster_slug.lower().replace('_', '-') }}.git"
-  ]
+  ],
+  "__prompts__": {
+    "environment": "Name the environment (prod/stage/dev):"
+  }
 }
