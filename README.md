@@ -53,7 +53,7 @@ phd-cluster-template/
 │   ├── create-instance.sh      # Instance creation logic
 │   ├── delete-instance.sh      # Instance deletion logic
 │   └── *.sh                    # Utility scripts
-├── .github/workflows/          # GitHub Actions workflows
+├── .github/workflows/          # GitHub Actions workflows (not run directly; referenced by cluster-template workflows)
 │   ├── create-instance.yml     # Instance creation workflow
 │   └── delete-instance.yml     # Instance deletion workflow
 ```
