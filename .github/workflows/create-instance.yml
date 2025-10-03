@@ -1,98 +1,99 @@
-name: PHD Instance Creator
+name: Create Instance
 
 on:
-  workflow_call:
-    secrets:
-      KUBECONFIG_CONTENT:
-        description: "Kubernetes config content from terraform output"
-        required: true
+  workflow_dispatch:
     inputs:
-      INSTANCE_NAME:
-        description: "Instance to create"
+      instance_name:
+        description: "Instance name (must be unique and DNS-compliant)"
+        required: true
         type: string
-      PLATFORM_NAME:
-        description: "Platform name"
-        default: "My Open edX Instance"
-        type: string
-      INSTANCE_TEMPLATE_REPOSITORY:
-        description: "Repository containing the instance template"
+      template_repository:
+        description: "Template repository URL"
+        required: true
         default: "https://github.com/open-craft/phd-cluster-template.git"
         type: string
-      EDX_PLATFORM_REPOSITORY:
-        description: "Repository to clone the edx-platform from"
+      platform_name:
+        description: 'Platform name (e.g., "My Open edX Platform")'
+        required: true
+        type: string
+      edx_platform_repository:
+        description: "edX Platform repository URL"
+        required: false
         default: "https://github.com/openedx/edx-platform.git"
         type: string
-      EDX_PLATFORM_VERSION:
-        description: "Version of the edx-platform to use"
-        default: "release/teak"
-        type: string
-      TUTOR_VERSION:
-        description: "Version of the tutor to use"
-        default: "v20.0.1"
-        type: string
-      RUNNER_WORKFLOW_LABEL:
-        description: 'The label of the runner workflow to run'
+      edx_platform_version:
+        description: "edX Platform version/branch"
         required: false
+        default: "master"
         type: string
-        default: 'ubuntu-24.04'
+      tutor_version:
+        description: "Tutor version"
+        required: false
+        default: "latest"
+        type: string
 
 jobs:
   create-instance:
-    runs-on: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
-    defaults:
-      run:
-        shell: bash
-    env:
-      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
-      PLATFORM_NAME: ${{ inputs.PLATFORM_NAME }}
-      INSTANCE_TEMPLATE_REPOSITORY: ${{ inputs.INSTANCE_TEMPLATE_REPOSITORY }}
-      EDX_PLATFORM_REPOSITORY: ${{ inputs.EDX_PLATFORM_REPOSITORY }}
-      EDX_PLATFORM_VERSION: ${{ inputs.EDX_PLATFORM_VERSION }}
-      TUTOR_VERSION: ${{ inputs.TUTOR_VERSION }}
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository for helper scripts
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install PHD CLI
         run: |
-          pip install cookiecutter
-          pip install -r requirements/base.txt
+          uv tool install git+https://github.com/open-craft/phd-cluster-template.git#subdirectory=tooling
 
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Configure kubectl with terraform output
-        run: |
-          echo "${{ secrets.KUBECONFIG_CONTENT }}" > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Verify cluster connectivity
-        run: |
-          kubectl cluster-info
-          kubectl get nodes
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
 
       - name: Create instance
+        env:
+          KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG_CONTENT }}
+          PHD_CLUSTER_DOMAIN: ${{ secrets.PHD_CLUSTER_DOMAIN }}
+          PHD_MYSQL_HOST: ${{ secrets.PHD_MYSQL_HOST }}
+          PHD_MYSQL_PORT: ${{ secrets.PHD_MYSQL_PORT }}
+          PHD_MYSQL_ADMIN_USER: ${{ secrets.PHD_MYSQL_ADMIN_USER }}
+          PHD_MYSQL_ADMIN_PASSWORD: ${{ secrets.PHD_MYSQL_ADMIN_PASSWORD }}
+          PHD_MONGODB_HOST: ${{ secrets.PHD_MONGODB_HOST }}
+          PHD_MONGODB_PORT: ${{ secrets.PHD_MONGODB_PORT }}
+          PHD_MONGODB_ADMIN_USER: ${{ secrets.PHD_MONGODB_ADMIN_USER }}
+          PHD_MONGODB_ADMIN_PASSWORD: ${{ secrets.PHD_MONGODB_ADMIN_PASSWORD }}
+          PHD_MONGODB_CLUSTER_ID: ${{ secrets.PHD_MONGODB_CLUSTER_ID }}
+          PHD_DIGITALOCEAN_TOKEN: ${{ secrets.PHD_DIGITALOCEAN_TOKEN }}
+          PHD_STORAGE_TYPE: ${{ secrets.PHD_STORAGE_TYPE }}
+          PHD_STORAGE_REGION: ${{ secrets.PHD_STORAGE_REGION }}
+          PHD_STORAGE_ACCESS_KEY_ID: ${{ secrets.PHD_STORAGE_ACCESS_KEY_ID }}
+          PHD_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.PHD_STORAGE_SECRET_ACCESS_KEY }}
         run: |
-          source ./activate
           phd_create_instance \
-            "$INSTANCE_NAME" \
-            "$INSTANCE_TEMPLATE_REPOSITORY" \
-            "$PLATFORM_NAME" \
-            "$EDX_PLATFORM_REPOSITORY" \
-            "$EDX_PLATFORM_VERSION" \
-            "$TUTOR_VERSION"
+            "${{ github.event.inputs.instance_name }}" \
+            "${{ github.event.inputs.template_repository }}" \
+            "${{ github.event.inputs.platform_name }}" \
+            --edx-platform-repository "${{ github.event.inputs.edx_platform_repository }}" \
+            --edx-platform-version "${{ github.event.inputs.edx_platform_version }}" \
+            --tutor-version "${{ github.event.inputs.tutor_version }}"
 
-      - name: Verify instance setup
+      - name: Summary
         run: |
-          echo "Instance '$INSTANCE_NAME' created successfully"
-          echo "Namespace: $INSTANCE_NAME"
-          echo "ArgoCD Application: $INSTANCE_NAME.kubernetes.default.svc"
-          kubectl get all -n "$INSTANCE_NAME" || echo "No resources found in namespace (this is normal for a new instance)"
+          echo "## Instance Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Instance Name:** \`${{ github.event.inputs.instance_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform Name:** ${{ github.event.inputs.platform_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**edX Platform:** ${{ github.event.inputs.edx_platform_repository }} @ ${{ github.event.inputs.edx_platform_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tutor Version:** ${{ github.event.inputs.tutor_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check ArgoCD for application sync status" >> $GITHUB_STEP_SUMMARY
+          echo "2. Monitor Argo Workflows for provisioning progress" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify instance is accessible at your configured domain" >> $GITHUB_STEP_SUMMARY

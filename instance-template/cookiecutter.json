@@ -1,7 +1,7 @@
 {
   "instance_name": "demo",
   "instance_slug": "{{ cookiecutter.instance_name.lower().replace(' ', '-') }}",
-  "instance_domain": "{{ cookiecutter.instance_slug.lower().replace('_', '-') + '.' + env('PHD_CLUSTER_DOMAIN') | default('example.com') }}",
+  "instance_domain": "{{ cookiecutter.instance_slug.lower().replace('_', '-') + '.' + (env('PHD_CLUSTER_DOMAIN') | default('example.com')) }}",
   "environment": "{{ env('PHD_ENVIRONMENT') | default('production') }}",
   "platform_description": "Open edX Instance for {{ cookiecutter.instance_name }}",
   "platform_repository": "https://github.com/openedx/edx-platform.git",

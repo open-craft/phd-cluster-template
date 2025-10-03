@@ -55,7 +55,7 @@ variable "kubernetes_cluster_name" {
 
 variable "kubernetes_version" {
   type        = string
-  default     = "1.33.1-do.3"
+  default     = "1.33.1-do.4"
   description = "Kubernetes version for the cluster."
 }
 
