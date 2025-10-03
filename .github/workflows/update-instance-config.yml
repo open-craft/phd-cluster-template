@@ -1,7 +1,7 @@
 name: Update Instance Config
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       INSTANCE_NAME:
         description: "Instance to create"
@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       STRAIN_REPOSITORY:
-        description: 'The repository for strains to checkout. It should follow the format: ORGANIZATION/REPO'
+        description: "The repository for strains to checkout. It should follow the format: ORGANIZATION/REPO"
         required: true
         type: string
       STRAIN_REPOSITORY_BRANCH:
@@ -32,10 +32,10 @@ on:
         required: true
         type: string
       RUNNER_WORKFLOW_LABEL:
-        description: 'The label of the runner workflow to run'
+        description: "The label of the runner workflow to run"
         required: false
         type: string
-        default: 'ubuntu-24.04'
+        default: "ubuntu-24.04"
 
 jobs:
   update-instance-config:
@@ -74,12 +74,13 @@ jobs:
           ref: ${{ inputs.PICASSO_VERSION }}
           path: picasso
 
-      - name: Checkout PHD cluster template repository for utility scripts
-        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          repository: open-craft/phd-cluster-template
-          ref: ${{ inputs.PHD_CLUSTER_TEMPLATE_VERSION }}
-          path: phd-cluster-template
+          enable-cache: true
+
+      - name: Install PHD CLI
+        run: uv tool install git+https://github.com/open-craft/phd-cluster-template.git@${{ inputs.PHD_CLUSTER_TEMPLATE_VERSION }}#subdirectory=tooling
 
       - name: Checkout cluster repository for build configurations
         uses: actions/checkout@v4
@@ -93,7 +94,6 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           pip install -r picasso/requirements/base.txt
-          pip install -r phd-cluster-template/requirements/base.txt
 
       - name: Get Tutor Configurations from config.yml and set them as an environment variable
         working-directory: ${{ github.workspace }}
