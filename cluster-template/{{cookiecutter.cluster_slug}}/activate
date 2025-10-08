@@ -18,20 +18,11 @@ pushd . > '/dev/null' || {
     return 1
 }
 
-PHD_DEBUG=true
-
 readonly ROOT_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]:-$0}")") || {
     echo "Failed to determine infrastructure directory path" >&2
     popd > '/dev/null'
     return 1
 }
-
-readonly INFRA_DIR="${ROOT_DIR}/infrastructure"
-readonly INSTANCES_DIR="${ROOT_DIR}/instances"
-
-# Remote scripts configuration
-export REMOTE_SCRIPTS_VERSION="${REMOTE_SCRIPTS_VERSION:-main}"
-export REMOTE_SCRIPTS_DIR_URL="https://raw.githubusercontent.com/open-craft/phd-cluster-template/${REMOTE_SCRIPTS_VERSION}/scripts"
 
 ################################################################################
 # Deactivation function
@@ -64,12 +55,3 @@ fi
 
 export KUBECONFIG="${INFRA_DIR}/.kubeconfig"
 
-# Load PHD commands directly into memory
-echo "Loading PHD helper scripts from $REMOTE_SCRIPTS_DIR_URL..."
-
-# shellcheck disable=SC1090
-source <(curl -sSL --fail "${REMOTE_SCRIPTS_DIR_URL}/phd-commands.sh") || {
-    echo "Failed to load PHD helper scripts" >&2
-    deactivate_phd
-    return 1
-}
