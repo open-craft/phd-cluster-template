@@ -77,12 +77,6 @@ variable "kubernetes_resource_quotas" {
   default     = "{}"
 }
 
-variable "environment" {
-  type        = string
-  default     = "{{ cookiecutter.environment }}"
-  description = "The project environment. (for example: production, staging, development, etc.)"
-}
-
 variable "lets_encrypt_notification_inbox" {
   type        = string
   default     = "dev@example.com"

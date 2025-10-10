@@ -27,6 +27,7 @@ DEFAULT_TUTOR_VERSION = "v20.0.1"
 DEFAULT_EDX_PLATFORM_VERSION = "release/teak"
 DEFAULT_EDX_PLATFORM_REPOSITORY = "https://github.com/openedx/edx-platform.git"
 DEFAULT_TEMPLATE_REPOSITORY = "https://github.com/open-craft/phd-cluster-template.git"
+DEFAULT_TEMPLATE_VERSION = "main"
 
 
 def _ensure_argo_workflows_installed() -> None:
@@ -50,6 +51,7 @@ def _ensure_argo_workflows_installed() -> None:
 def _generate_instance_config(  # pylint: disable=too-many-positional-arguments
     instance_name: str,
     template_repository: str,
+    template_version: str,
     platform_name: str,
     edx_platform_repository: str,
     edx_platform_version: str,
@@ -64,6 +66,7 @@ def _generate_instance_config(  # pylint: disable=too-many-positional-arguments
     Args:
         instance_name: Name of the instance to create
         template_repository: Git URL of the instance template repository
+        template_version: Version of the instance template to use
         platform_name: Display name for the platform
         edx_platform_repository: Git URL of the edx-platform repository
         edx_platform_version: Version/branch of edx-platform to use
@@ -92,6 +95,7 @@ def _generate_instance_config(  # pylint: disable=too-many-positional-arguments
         "generate instance configuration",
         cookiecutter,
         template_repository,
+        checkout=template_version,
         directory="instance-template",
         output_dir=str(instances_dir),
         overwrite_if_exists=False,
@@ -319,6 +323,7 @@ def _create_argocd_application(instance_name: str, instances_dir: Path) -> None:
 def create_instance(  # pylint: disable=too-many-positional-arguments
     instance_name: str,
     template_repository: str = DEFAULT_TEMPLATE_REPOSITORY,
+    template_version: str = DEFAULT_TEMPLATE_VERSION,
     platform_name: str = "My Open edX Instance",
     edx_platform_repository: str = DEFAULT_EDX_PLATFORM_REPOSITORY,
     edx_platform_version: str = DEFAULT_EDX_PLATFORM_VERSION,
@@ -337,6 +342,7 @@ def create_instance(  # pylint: disable=too-many-positional-arguments
     Args:
         instance_name: Name of the instance to create
         template_repository: Git URL of the instance template repository
+        template_version: Version of the instance template to use
         platform_name: Display name for the platform
         edx_platform_repository: Git URL of the edx-platform repository
         edx_platform_version: Version/branch of edx-platform to use
@@ -360,6 +366,7 @@ def create_instance(  # pylint: disable=too-many-positional-arguments
     _generate_instance_config(
         instance_name,
         template_repository,
+        template_version,
         platform_name,
         edx_platform_repository,
         edx_platform_version,
@@ -454,6 +461,11 @@ def main() -> None:
         "--template-repository",
         default=DEFAULT_TEMPLATE_REPOSITORY,
         help=f"Git URL of the instance template repository (default: {DEFAULT_TEMPLATE_REPOSITORY})",
+    )
+    parser.add_argument(
+        "--template-version",
+        default=DEFAULT_TEMPLATE_VERSION,
+        help=f"Version of the instance template to use (default: {DEFAULT_TEMPLATE_VERSION})",
     )
     parser.add_argument(
         "--platform-name",

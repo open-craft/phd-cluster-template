@@ -16,7 +16,7 @@ output "cluster_name" {
 
 output "velero_backups_bucket" {
   description = "Velero backups bucket"
-  value     = module.velero_backups.spaces_bucket.name
+  value     = module.velero_backups.bucket_name
 }
 
 output "mysql_host" {
@@ -32,6 +32,7 @@ output "mysql_port" {
 output "mysql_root_user" {
   description = "MySQL root username"
   value       = module.mysql_database.cluster_root_user
+  sensitive   = true
 }
 
 output "mysql_root_password" {
@@ -53,6 +54,7 @@ output "mongodb_port" {
 output "mongodb_admin_user" {
   description = "MongoDB admin username"
   value       = module.mongodb_database.cluster_root_user
+  sensitive   = true
 }
 
 output "mongodb_admin_password" {

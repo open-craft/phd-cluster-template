@@ -1,4 +1,9 @@
 locals {
+  context_file = jsondecode(file("${path.module}/../context.json"))
+
+  kubernetes_cluster_domain      = local.context_file.cluster_domain
+  kubernetes_cluster_environment = local.context_file.environment
+
   harmony_terraform_module_version   = "{{ cookiecutter.harmony_module_version }}"
   opencraft_terraform_module_version = "{{ cookiecutter.opencraft_module_version }}"
 
@@ -11,7 +16,7 @@ module "main_vpc" {
   source = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/digitalocean/vpc?ref=${local.harmony_terraform_module_version}"
 
   region       = var.region
-  environment  = var.environment
+  environment  = local.kubernetes_cluster_environment
 
   vpc_ip_range = var.vpc_ip_range
 }
@@ -20,35 +25,18 @@ module "kubernetes_cluster" {
   source = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/digitalocean/doks?ref=${local.harmony_terraform_module_version}"
 
   region      = var.region
-  environment = var.environment
+  environment = local.kubernetes_cluster_environment
   vpc_id      = module.main_vpc.vpc_id
 
   cluster_name       = var.kubernetes_cluster_name
   kubernetes_version = var.kubernetes_version
 }
 
-module "kubernetes_cert_manager" {
-  depends_on = [module.kubernetes_cluster]
-
-  source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/k8s-cert-manager?ref=${local.opencraft_terraform_module_version}"
-
-  namespace                       = "kube-system"
-  lets_encrypt_notification_inbox = var.lets_encrypt_notification_inbox
-}
-
-module "kubernetes_ingress" {
-  depends_on = [module.kubernetes_cluster]
-
-  source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/k8s-nginx-ingress?ref=${local.opencraft_terraform_module_version}"
-
-  ingress_namespace = "kube-system"
-}
-
 module "mysql_database" {
   source = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/digitalocean/database?ref=${local.harmony_terraform_module_version}"
 
   region                  = var.region
-  environment             = var.environment
+  environment             = local.kubernetes_cluster_environment
   access_token            = var.access_token
   vpc_id                  = module.main_vpc.vpc_id
   kubernetes_cluster_name = var.kubernetes_cluster_name
@@ -74,7 +62,7 @@ module "mongodb_database" {
   source = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/digitalocean/database?ref=${local.harmony_terraform_module_version}"
 
   region                  = var.region
-  environment             = var.environment
+  environment             = local.kubernetes_cluster_environment
   access_token            = var.access_token
   vpc_id                  = module.main_vpc.vpc_id
   kubernetes_cluster_name = var.kubernetes_cluster_name
@@ -97,30 +85,30 @@ module "mongodb_database" {
 }
 
 module "velero_backups" {
-  source = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/digitalocean/database?ref=${local.harmony_terraform_module_version}"
+  source = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/digitalocean/spaces?ref=${local.harmony_terraform_module_version}"
 
   bucket_prefix = "backup-${var.kubernetes_cluster_name}"
   region        = var.region
-  environment   = var.environment
+  environment   = local.kubernetes_cluster_environment
 
   is_versioning_enabled    = false
   is_force_destroy_enabled = false
 }
 
 module "harmony" {
-  depends_on = [module.kubernetes_cluster.cluster_id]
+  depends_on = [module.kubernetes_cluster]
 
   source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/harmony?ref=${local.opencraft_terraform_module_version}"
 
   cluster_id                         = module.kubernetes_cluster.cluster_id
-  cluster_domain                     = var.cluster_domain
+  cluster_domain                     = local.kubernetes_cluster_domain
   cluster_provider                   = "digitalocean"
   lets_encrypt_notification_inbox    = var.lets_encrypt_notification_inbox
   ingress_resource_quota             = lookup(yamldecode(var.kubernetes_resource_quotas), "nginx", {})
   prometheus_enabled                 = var.prometheus_enabled
   prometheus_additional_alerts       = var.additional_prometheus_alerts
   grafana_enabled                    = var.grafana_enabled
-  grafana_host                       = "grafana.${var.cluster_domain}"
+  grafana_host                       = "grafana.${local.kubernetes_cluster_domain}"
   alertmanager_enabled               = var.prometheus_enabled
   alertmanager_config                = yamldecode(var.alertmanager_config)
   velero_enabled                     = var.velero_enabled
@@ -133,7 +121,7 @@ module "harmony" {
   velero_plugin_digitalocean_token   = var.access_token
   velero_volume_snapshot_provider    = "digitalocean.com/velero"
   velero_schedules                   = var.velero_schedules
-  openfaas_host                      = "openfaas.${var.cluster_domain}"
+  openfaas_host                      = "openfaas.${local.kubernetes_cluster_domain}"
 }
 
 resource "digitalocean_project" "project" {

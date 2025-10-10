@@ -16,7 +16,7 @@ output "cluster_name" {
 
 output "velero_backups_bucket" {
   description = "Velero backups bucket"
-  value     = module.velero_backups.s3_bucket.id
+  value     = module.velero_backups.bucket_name
 }
 
 output "mysql_host" {

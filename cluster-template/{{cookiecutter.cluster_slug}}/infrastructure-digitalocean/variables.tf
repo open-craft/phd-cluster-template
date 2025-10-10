@@ -69,12 +69,6 @@ variable "kubernetes_resource_quotas" {
   default     = "{}"
 }
 
-variable "environment" {
-  type        = string
-  default     = "{{ cookiecutter.environment }}"
-  description = "The project environment. (for example: production, staging, development, etc.)"
-}
-
 variable "lets_encrypt_notification_inbox" {
   type        = string
   default     = "dev@example.com"
@@ -155,10 +149,20 @@ variable "prometheus_enabled" {
   description = "Whether to enable Prometheus monitoring."
 }
 
+variable "additional_prometheus_alerts" {
+  type        = string
+  default     = ""
+  description = "Additional Prometheus alerts to add to the cluster."
+  validation {
+    condition     = length(trimspace(var.additional_prometheus_alerts)) == 0 || can(yamldecode(var.additional_prometheus_alerts))
+    error_message = "The additional_prometheus_alerts provided was invalid."
+  }
+}
+
 variable "alertmanager_config" {
   type        = string
-  description = "Alert Manager configuration as a YAML-encoded string"
   default     = "{}"
+  description = "Alert Manager configuration as a YAML-encoded string"
   validation {
     condition     = can(yamldecode(var.alertmanager_config))
     error_message = "The alertmanager_config value must be a valid YAML-encoded string."
