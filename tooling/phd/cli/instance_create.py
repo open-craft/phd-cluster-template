@@ -23,11 +23,12 @@ logger = get_logger(__name__)
 ARGO_NAMESPACE = "argo"
 WORKFLOW_TIMEOUT = 300
 WORKFLOW_CHECK_INTERVAL = 5
-DEFAULT_TUTOR_VERSION = "v20.0.1"
-DEFAULT_EDX_PLATFORM_VERSION = "release/teak"
-DEFAULT_EDX_PLATFORM_REPOSITORY = "https://github.com/openedx/edx-platform.git"
-DEFAULT_TEMPLATE_REPOSITORY = "https://github.com/open-craft/phd-cluster-template.git"
-DEFAULT_TEMPLATE_VERSION = "main"
+DEFAULT_PLATFORM_NAME = None
+DEFAULT_TUTOR_VERSION = None
+DEFAULT_EDX_PLATFORM_VERSION = None
+DEFAULT_EDX_PLATFORM_REPOSITORY = None
+DEFAULT_TEMPLATE_REPOSITORY = None
+DEFAULT_TEMPLATE_VERSION = None
 
 
 def _ensure_argo_workflows_installed() -> None:
@@ -50,12 +51,12 @@ def _ensure_argo_workflows_installed() -> None:
 
 def _generate_instance_config(  # pylint: disable=too-many-positional-arguments
     instance_name: str,
-    template_repository: str,
-    template_version: str,
-    platform_name: str,
-    edx_platform_repository: str,
-    edx_platform_version: str,
-    tutor_version: str,
+    template_repository: str | None,
+    template_version: str | None,
+    platform_name: str | None,
+    edx_platform_repository: str | None,
+    edx_platform_version: str | None,
+    tutor_version: str | None,
     instances_dir: Path,
     cluster_domain: str,
     environment: str,
@@ -90,6 +91,32 @@ def _generate_instance_config(  # pylint: disable=too-many-positional-arguments
     os.environ["PHD_CLUSTER_DOMAIN"] = cluster_domain
     os.environ["PHD_ENVIRONMENT"] = environment
 
+    extra_context = {
+        "instance_name": instance_name,
+        "platform_repository": edx_platform_repository,
+        "platform_name": platform_name,
+        "platform_version": edx_platform_version,
+        "tutor_version": tutor_version,
+    }
+
+    if template_repository:
+        extra_context["template_repository"] = template_repository
+
+    if template_version:
+        extra_context["template_version"] = template_version
+
+    if platform_name:
+        extra_context["platform_name"] = platform_name
+
+    if edx_platform_repository:
+        extra_context["platform_repository"] = edx_platform_repository
+
+    if edx_platform_version:
+        extra_context["platform_version"] = edx_platform_version
+
+    if tutor_version:
+        extra_context["tutor_version"] = tutor_version
+
     run_command_with_logging(
         logger,
         "generate instance configuration",
@@ -106,8 +133,6 @@ def _generate_instance_config(  # pylint: disable=too-many-positional-arguments
             "platform_name": platform_name,
             "platform_version": edx_platform_version,
             "tutor_version": tutor_version,
-            "PHD_CLUSTER_DOMAIN": os.getenv("PHD_CLUSTER_DOMAIN", "example.com"),
-            "PHD_ENVIRONMENT": os.getenv("PHD_ENVIRONMENT", "production"),
         },
     )
 
@@ -322,12 +347,12 @@ def _create_argocd_application(instance_name: str, instances_dir: Path) -> None:
 
 def create_instance(  # pylint: disable=too-many-positional-arguments
     instance_name: str,
-    template_repository: str = DEFAULT_TEMPLATE_REPOSITORY,
-    template_version: str = DEFAULT_TEMPLATE_VERSION,
-    platform_name: str = "My Open edX Instance",
-    edx_platform_repository: str = DEFAULT_EDX_PLATFORM_REPOSITORY,
-    edx_platform_version: str = DEFAULT_EDX_PLATFORM_VERSION,
-    tutor_version: str = DEFAULT_TUTOR_VERSION,
+    template_repository: str | None = DEFAULT_TEMPLATE_REPOSITORY,
+    template_version: str | None = DEFAULT_TEMPLATE_VERSION,
+    platform_name: str | None = DEFAULT_PLATFORM_NAME,
+    edx_platform_repository: str | None = DEFAULT_EDX_PLATFORM_REPOSITORY,
+    edx_platform_version: str | None = DEFAULT_EDX_PLATFORM_VERSION,
+    tutor_version: str | None = DEFAULT_TUTOR_VERSION,
 ) -> None:
     """
     Create a new OpenEdX instance with all required resources.

@@ -14,12 +14,12 @@ logger = get_logger(__name__)
 
 DEFAULT_ENVIRONMENT = "production"
 DEFAULT_SHORT_DESCRIPTION = "Kubernetes cluster to host Open edX instances"
-DEFAULT_CLOUD_PROVIDER = "aws"
-DEFAULT_HARMONY_MODULE_VERSION = "bfdcca60d62801acbf61e77f49de25889647b5ef"
-DEFAULT_OPENCRAFT_MODULE_VERSION = "v1.0.1"
-DEFAULT_PICASSO_VERSION = "main"
-DEFAULT_TEMPLATE_VERSION = "main"
-DEFAULT_GIT_ORGANIZATION = "open-craft"
+DEFAULT_CLOUD_PROVIDER = None
+DEFAULT_HARMONY_MODULE_VERSION = None
+DEFAULT_OPENCRAFT_MODULE_VERSION = None
+DEFAULT_PICASSO_VERSION = None
+DEFAULT_TEMPLATE_VERSION = None
+DEFAULT_GITHUB_ORGANIZATION = None
 DEFAULT_TEMPLATE_REPOSITORY = "https://github.com/open-craft/phd-cluster-template.git"
 
 
@@ -28,13 +28,13 @@ def create_cluster(  # pylint: disable=too-many-arguments,too-many-positional-ar
     cluster_domain: str,
     environment: str = DEFAULT_ENVIRONMENT,
     short_description: str = DEFAULT_SHORT_DESCRIPTION,
-    cloud_provider: str = DEFAULT_CLOUD_PROVIDER,
-    harmony_module_version: str = DEFAULT_HARMONY_MODULE_VERSION,
-    opencraft_module_version: str = DEFAULT_OPENCRAFT_MODULE_VERSION,
-    picasso_version: str = DEFAULT_PICASSO_VERSION,
-    template_version: str = DEFAULT_TEMPLATE_VERSION,
-    git_organization: str = DEFAULT_GIT_ORGANIZATION,
-    git_repository: str = "",
+    cloud_provider: str | None = DEFAULT_CLOUD_PROVIDER,
+    harmony_module_version: str | None = DEFAULT_HARMONY_MODULE_VERSION,
+    opencraft_module_version: str | None = DEFAULT_OPENCRAFT_MODULE_VERSION,
+    picasso_version: str | None = DEFAULT_PICASSO_VERSION,
+    template_version: str | None = DEFAULT_TEMPLATE_VERSION,
+    github_organization: str | None = DEFAULT_GITHUB_ORGANIZATION,
+    github_repository: str | None = None,
     template_repository: str = DEFAULT_TEMPLATE_REPOSITORY,
     output_dir: str = ".",
 ) -> None:
@@ -51,8 +51,8 @@ def create_cluster(  # pylint: disable=too-many-arguments,too-many-positional-ar
         opencraft_module_version: OpenCraft module version
         picasso_version: Picasso version
         template_version: PHD cluster template version
-        git_organization: Git organization name
-        git_repository: Git repository URL (if not provided, will be auto-generated)
+        github_organization: Git organization name
+        github_repository: Git repository URL (if not provided, will be auto-generated)
         template_repository: Git URL of the cluster template repository
         output_dir: Directory where cluster config will be created
 
@@ -64,8 +64,8 @@ def create_cluster(  # pylint: disable=too-many-arguments,too-many-positional-ar
 
     cluster_slug = cluster_name.lower().replace(" ", "-").replace("_", "-")
 
-    if not git_repository:
-        git_repository = f"https://github.com/{git_organization}/phd-{cluster_slug}.git"
+    if not github_repository:
+        github_repository = f"https://github.com/{github_organization}/phd-{cluster_slug}.git"
 
     output_path = Path(output_dir).resolve()
     output_path.mkdir(parents=True, exist_ok=True)
@@ -86,17 +86,30 @@ def create_cluster(  # pylint: disable=too-many-arguments,too-many-positional-ar
     extra_context = {
         "environment": environment,
         "cluster_name": cluster_name,
-        "cluster_slug": cluster_slug,
         "cluster_domain": cluster_domain,
         "short_description": short_description,
-        "cloud_provider": cloud_provider,
-        "harmony_module_version": harmony_module_version,
-        "opencraft_module_version": opencraft_module_version,
-        "picasso_version": picasso_version,
-        "phd_cluster_template_version": template_version,
-        "git_organization": git_organization,
-        "git_repository": git_repository,
     }
+
+    if cloud_provider:
+        extra_context["cloud_provider"] = [cloud_provider]
+
+    if harmony_module_version:
+        extra_context["harmony_module_version"] = harmony_module_version
+
+    if opencraft_module_version:
+        extra_context["opencraft_module_version"] = opencraft_module_version
+
+    if picasso_version:
+        extra_context["picasso_version"] = picasso_version
+
+    if template_version:
+        extra_context["phd_cluster_template_version"] = template_version
+
+    if github_organization:
+        extra_context["github_organization"] = github_organization
+
+    if github_repository:
+        extra_context["github_repository"] = github_repository
 
     logger.debug("Template repository: %s", template_repository)
     logger.debug("Extra context: %s", extra_context)
@@ -170,19 +183,19 @@ def main() -> None:
         help=f"PHD cluster template version (default: {DEFAULT_TEMPLATE_VERSION})",
     )
     parser.add_argument(
-        "--git-organization",
-        default=DEFAULT_GIT_ORGANIZATION,
-        help=f"Git organization name (default: {DEFAULT_GIT_ORGANIZATION})",
+        "--github-organization",
+        default=DEFAULT_GITHUB_ORGANIZATION,
+        help=f"GitHub organization name (default: {DEFAULT_GITHUB_ORGANIZATION})",
     )
     parser.add_argument(
-        "--git-repository",
+        "--github-repository",
         default="",
-        help="Git repository URL (if not provided, will be auto-generated)",
+        help="GitHub repository URL (if not provided, will be auto-generated)",
     )
     parser.add_argument(
         "--template-repository",
         default=DEFAULT_TEMPLATE_REPOSITORY,
-        help=f"Git URL of the cluster template repository (default: {DEFAULT_TEMPLATE_REPOSITORY})",
+        help=f"GitHub URL of the cluster template repository (default: {DEFAULT_TEMPLATE_REPOSITORY})",
     )
     parser.add_argument(
         "--output-dir",
@@ -203,8 +216,8 @@ def main() -> None:
             args.opencraft_module_version,
             args.picasso_version,
             args.template_version,
-            args.git_organization,
-            args.git_repository,
+            args.github_organization,
+            args.github_repository,
             args.template_repository,
             args.output_dir,
         )

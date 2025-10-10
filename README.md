@@ -34,10 +34,10 @@ This project provides a complete solution for hosting multiple Open edX instance
 ```
 phd-cluster-template/
 ├── cluster-template/           # Cookiecutter template for clusters
-│   ├── {{cookiecutter.cluster_slug}}/
-│   │   ├── activate           # Cluster activation script
-│   │   ├── infrastructure/    # Terraform infrastructure modules
-│   │   └── instances/         # Instance configurations
+│   ├── phd-{{cookiecutter.cluster_slug_normalized}}-cluster/
+│   │   ├── activate            # Cluster activation script
+│   │   ├── infrastructure/     # Terraform infrastructure modules (after generation)
+│   │   └── instances/          # Instance configurations
 │   └── hooks/                  # Cookiecutter post-generation hooks
 ├── instance-template/          # Cookiecutter template for instances
 │   └── {{cookiecutter.instance_slug}}/

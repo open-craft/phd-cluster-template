@@ -32,7 +32,7 @@ def create_git_repo():
     try:
         subprocess.run(["git", "init"], check=True)
         subprocess.run(["git", "branch", "-M", "main"], check=True)
-        subprocess.run(["git", "remote", "add", "origin", "{{ cookiecutter.git_repository }}"], check=True)
+        subprocess.run(["git", "remote", "add", "origin", "{{ cookiecutter.github_repository }}"], check=True)
         subprocess.run(["git", "add", "."], check=True)
         subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
     except subprocess.CalledProcessError as e:
