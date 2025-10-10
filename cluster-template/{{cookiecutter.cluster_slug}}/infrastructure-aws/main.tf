@@ -1,5 +1,9 @@
 locals {
-  harmony_terraform_module_version = "{{ cookiecutter.harmony_module_version }}"
+  harmony_terraform_module_version   = "{{ cookiecutter.harmony_module_version }}"
+  opencraft_terraform_module_version = "{{ cookiecutter.opencraft_module_version }}"
+
+  # Velero plugin versions
+  velero_aws_plugin_tag = "v1.9.0" # https://github.com/vmware-tanzu/velero-plugin-for-aws/releases
 }
 
 data "aws_caller_identity" "current" {}
@@ -43,7 +47,7 @@ module "kubernetes_cluster" {
 module "kubernetes_cert_manager" {
   depends_on = [module.kubernetes_cluster]
 
-  source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/k8s-cert-manager?ref=v1.0.1"
+  source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/k8s-cert-manager?ref=${local.opencraft_terraform_module_version}"
 
   namespace                       = "kube-system"
   lets_encrypt_notification_inbox = var.lets_encrypt_notification_inbox
@@ -52,9 +56,46 @@ module "kubernetes_cert_manager" {
 module "kubernetes_ingress" {
   depends_on = [module.kubernetes_cluster]
 
-  source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/k8s-nginx-ingress?ref=v1.0.1"
+  source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/k8s-nginx-ingress?ref=${local.opencraft_terraform_module_version}"
 
   ingress_namespace = "kube-system"
+}
+
+module "velero_backups" {
+  source        = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/aws/s3?ref=${local.harmony_terraform_module_version}"
+
+  bucket_prefix = "backup-${var.kubernetes_cluster_name}"
+  environment   = var.environment
+
+  is_versioning_enabled    = false
+  is_force_destroy_enabled = false
+}
+
+module "harmony" {
+  depends_on = [module.kubernetes_cluster.cluster_id]
+
+  source = "git::https://gitlab.com/opencraft/ops/terraform-modules.git//modules/harmony?ref=${local.opencraft_terraform_module_version}"
+
+  cluster_id                      = module.kubernetes_cluster.cluster_id
+  cluster_domain                  = var.cluster_domain
+  cluster_provider                = "aws"
+  lets_encrypt_notification_inbox = var.lets_encrypt_notification_inbox
+  ingress_resource_quota          = lookup(yamldecode(var.kubernetes_resource_quotas), "nginx", {})
+  prometheus_enabled              = var.prometheus_enabled
+  prometheus_additional_alerts    = var.additional_prometheus_alerts
+  grafana_enabled                 = var.grafana_enabled
+  grafana_host                    = "grafana.${var.cluster_domain}"
+  alertmanager_enabled            = var.prometheus_enabled
+  alertmanager_config             = yamldecode(var.alertmanager_config)
+  velero_enabled                  = var.velero_enabled
+  velero_backup_bucket            = module.velero_backups.bucket_name
+  velero_backup_region            = var.region
+  velero_backup_access_key_id     = var.access_key_id
+  velero_backup_secret_access_key = var.secret_access_key
+  velero_plugin_aws_version       = local.velero_aws_plugin_tag
+  velero_volume_snapshot_provider = "aws"
+  velero_schedules                = var.velero_schedules
+  openfaas_host                   = "openfaas.${var.cluster_domain}"
 }
 
 module "mysql_database" {
@@ -107,67 +148,4 @@ module "mongodb_database" {
       value = module.kubernetes_cluster.cluster_id
     },
   ]
-}
-
-# Output kubeconfig content for GitHub Actions
-output "kubeconfig_content" {
-  description = "Kubernetes configuration content for cluster access"
-  value       = module.kubernetes_cluster.kubeconfig
-  sensitive   = true
-}
-
-# Output cluster endpoint for reference
-output "cluster_endpoint" {
-  description = "Kubernetes cluster endpoint"
-  value       = module.kubernetes_cluster.cluster_endpoint
-}
-
-# Output cluster name for reference
-output "cluster_name" {
-  description = "Kubernetes cluster name"
-  value       = module.kubernetes_cluster.cluster_name
-}
-
-# Output MySQL database credentials
-output "mysql_host" {
-  description = "MySQL database host"
-  value       = module.mysql_database.host
-}
-
-output "mysql_port" {
-  description = "MySQL database port"
-  value       = module.mysql_database.port
-}
-
-output "mysql_root_user" {
-  description = "MySQL root username"
-  value       = module.mysql_database.user
-}
-
-output "mysql_root_password" {
-  description = "MySQL root password"
-  value       = module.mysql_database.password
-  sensitive   = true
-}
-
-# Output MongoDB database credentials
-output "mongodb_host" {
-  description = "MongoDB database host"
-  value       = module.mongodb_database.host
-}
-
-output "mongodb_port" {
-  description = "MongoDB database port"
-  value       = module.mongodb_database.port
-}
-
-output "mongodb_admin_user" {
-  description = "MongoDB admin username"
-  value       = module.mongodb_database.user
-}
-
-output "mongodb_admin_password" {
-  description = "MongoDB admin password"
-  value       = module.mongodb_database.password
-  sensitive   = true
 }

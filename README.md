@@ -79,7 +79,7 @@ Install PHD as a tool:
 
 ```bash
 # Install from git repository
-uv tool install git+https://github.com/open-craft/phd-cluster-template.git#subdirectory=phd
+uv tool install git+https://github.com/open-craft/phd-cluster-template.git#subdirectory=tooling
 
 # Set required environment variable
 export PHD_CLUSTER_DOMAIN="your-cluster-domain.com"
@@ -93,13 +93,10 @@ Install for contribution:
 ```bash
 # Clone the repository
 git clone https://github.com/open-craft/phd-cluster-template.git
-cd phd-cluster-template/phd
+cd phd-cluster-template/tooling
 
 # Install with all dependencies
 uv sync --all-groups
-
-# Activate the virtual environment
-source .venv/bin/activate
 
 # Set required environment variable
 export PHD_CLUSTER_DOMAIN="your-cluster-domain.com"
@@ -388,26 +385,32 @@ These manifests use template variables with the `PHD_INSTANCE_` prefix (e.g., `{
 
 The system supports multiple MongoDB providers with automatic detection:
 
-- **`mongodb_direct`**: Direct connection to any MongoDB (self-hosted, Atlas, managed DBs)
 - **`digitalocean_api`**: DigitalOcean API-based database management
+- **`atlas`**: MongoDB Atlas API-based database management
 
 **Provider is automatically detected** based on your configuration.
 
 #### Quick Configuration
 
-**Self-hosted or MongoDB Atlas**:
+**DigitalOcean-managed MongoDB**:
 ```bash
 export PHD_MONGODB_HOST="mongodb.example.com"
 export PHD_MONGODB_PORT="27017"
 export PHD_MONGODB_ADMIN_USER="admin"
 export PHD_MONGODB_ADMIN_PASSWORD="secure_password"
-```
-
-**DigitalOcean via API**:
-```bash
-export PHD_MONGODB_CLUSTER_ID="abc12345-xyz67890"  # Forces API provider
+export PHD_MONGODB_CLUSTER_ID="abc12345-xyz67890"
 export PHD_DIGITALOCEAN_TOKEN="dop_v1_your_token"
 ```
+
+**MongoDB Atlas via CLI**:
+```bash
+export PHD_ATLAS_PUBLIC_KEY="your_public_key"
+export PHD_ATLAS_PRIVATE_KEY="your_private_key"
+export PHD_ATLAS_PROJECT_ID="your_project_id"
+export PHD_ATLAS_CLUSTER_NAME="Cluster0"
+```
+
+> **Note**: Atlas provisioning uses the [MongoDB Atlas CLI](https://www.mongodb.com/docs/atlas/cli/current/) for user management. The CLI is installed automatically from the [official MongoDB package repository](https://www.mongodb.com/docs/atlas/cli/current/install-atlas-cli/). Databases are created automatically on first write by your application.
 
 ### Storage Providers
 
@@ -556,9 +559,6 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Sync all dependencies (including dev group)
 uv sync --all-groups
-
-# Activate the virtual environment
-source .venv/bin/activate
 
 # Run tests
 uv run pytest

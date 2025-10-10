@@ -104,6 +104,7 @@ def create_cluster(  # pylint: disable=too-many-arguments,too-many-positional-ar
     try:
         cookiecutter(
             template_repository,
+            checkout=template_version,
             directory="cluster-template",
             output_dir=str(output_path),
             overwrite_if_exists=False,

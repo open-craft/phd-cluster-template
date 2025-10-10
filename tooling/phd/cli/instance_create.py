@@ -404,22 +404,18 @@ def create_instance(  # pylint: disable=too-many-positional-arguments
         "PHD_INSTANCE_MYSQL_ROOT_PASSWORD": os.getenv(
             "PHD_MYSQL_ROOT_PASSWORD", config_data.get("MYSQL_PASSWORD", "")
         ),
-        # MongoDB parameters
+        # MongoDB DigitalOcean parameters
         "PHD_INSTANCE_MONGODB_DATABASE": config_data.get("MONGODB_DATABASE", ""),
         "PHD_INSTANCE_MONGODB_USERNAME": config_data.get("MONGODB_USERNAME", ""),
         "PHD_INSTANCE_MONGODB_PASSWORD": config_data.get("MONGODB_PASSWORD", ""),
-        "PHD_INSTANCE_MONGODB_HOST": config_data.get("MONGODB_HOST"),
-        "PHD_INSTANCE_MONGODB_PORT": config_data.get("MONGODB_PORT"),
-        "PHD_INSTANCE_MONGODB_ADMIN_USER": os.getenv("PHD_MONGODB_ADMIN_USER", ""),
-        "PHD_INSTANCE_MONGODB_ADMIN_PASSWORD": os.getenv(
-            "PHD_MONGODB_ADMIN_PASSWORD", ""
-        ),
-        "PHD_INSTANCE_MONGODB_ADMIN_DATABASE": os.getenv(
-            "PHD_MONGODB_ADMIN_DATABASE", ""
-        ),
         "PHD_INSTANCE_MONGODB_PROVIDER": os.getenv("PHD_MONGODB_PROVIDER", ""),
         "PHD_INSTANCE_MONGODB_CLUSTER_ID": os.getenv("PHD_MONGODB_CLUSTER_ID", ""),
         "PHD_INSTANCE_DIGITALOCEAN_TOKEN": os.getenv("PHD_DIGITALOCEAN_TOKEN", ""),
+        # MongoDB Atlas parameters
+        "PHD_INSTANCE_ATLAS_PUBLIC_KEY": os.getenv("PHD_ATLAS_PUBLIC_KEY", ""),
+        "PHD_INSTANCE_ATLAS_PRIVATE_KEY": os.getenv("PHD_ATLAS_PRIVATE_KEY", ""),
+        "PHD_INSTANCE_ATLAS_PROJECT_ID": os.getenv("PHD_ATLAS_PROJECT_ID", ""),
+        "PHD_INSTANCE_ATLAS_CLUSTER_NAME": os.getenv("PHD_ATLAS_CLUSTER_NAME", ""),
         # Storage parameters
         "PHD_INSTANCE_STORAGE_BUCKET_NAME": config_data.get("STORAGE_BUCKET_NAME", ""),
         "PHD_INSTANCE_STORAGE_TYPE": config_data.get("STORAGE_TYPE"),

@@ -59,6 +59,16 @@ variable "kubernetes_version" {
   description = "Kubernetes version for the cluster."
 }
 
+variable "kubernetes_resource_quotas" {
+  type = string
+  validation {
+    condition     = can(yamldecode(var.kubernetes_resource_quotas))
+    error_message = "The kubernetes_resource_quotas provided was invalid."
+  }
+  description = "Resource configuration for the cluster."
+  default     = "{}"
+}
+
 variable "environment" {
   type        = string
   default     = "{{ cookiecutter.environment }}"
@@ -121,4 +131,42 @@ variable "mongodb_cluster_instances" {
     condition = var.mongodb_cluster_instances >= 1 && var.mongodb_cluster_instances <= 10
     error_message = "MongoDB cluster instances must be between 1 and 10."
   }
+}
+
+variable "velero_enabled" {
+  type        = bool
+  description = "Whether to enable Velero backup"
+  default     = false
+}
+
+variable "velero_schedules" {
+  type        = string
+  description = "The schedules for Velero backups"
+  default     = "{\"hourly-backup\":{\"disabled\":false,\"schedule\":\"30 */1 * * *\",\"template\":{\"ttl\":\"24h\"}},\"daily-backup\":{\"disabled\":false,\"schedule\":\"0 6 * * *\",\"template\":{\"ttl\":\"168h\"}},\"weekly-backup\":{\"disabled\":false,\"schedule\":\"59 23 * * 0\",\"template\":{\"ttl\":\"720h\"}}}"
+  validation {
+    condition     = can(yamldecode(var.velero_schedules))
+    error_message = "The velero_schedules value must be a valid YAML-encoded string."
+  }
+}
+
+variable "prometheus_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether to enable Prometheus monitoring."
+}
+
+variable "alertmanager_config" {
+  type        = string
+  description = "Alert Manager configuration as a YAML-encoded string"
+  default     = "{}"
+  validation {
+    condition     = can(yamldecode(var.alertmanager_config))
+    error_message = "The alertmanager_config value must be a valid YAML-encoded string."
+  }
+}
+
+variable "grafana_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether to enable Grafana monitoring."
 }

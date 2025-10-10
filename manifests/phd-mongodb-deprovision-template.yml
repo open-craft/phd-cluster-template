@@ -18,28 +18,26 @@ spec:
       - name: username
         description: "Name of the user to drop"
         value: "openedx_user"
-      - name: mongodb-host
-        description: "MongoDB host address"
-        value: "mongodb"
-      - name: mongodb-port
-        description: "MongoDB port"
-        value: "27017"
-      - name: mongodb-admin-user
-        description: "MongoDB admin user"
-        value: "admin"
-      - name: mongodb-admin-password
-        description: "MongoDB admin password"
-      - name: mongodb-admin-database
-        description: "MongoDB admin database"
-        value: "admin"
       - name: mongodb-provider
-        description: "MongoDB provider type (digitalocean_api, mongodb_direct, atlas)"
-        value: "mongodb_direct"
+        description: "MongoDB provider type (digitalocean_api, atlas)"
+        value: "digitalocean_api"
       - name: mongodb-cluster-id
         description: "MongoDB cluster ID (for DigitalOcean API provider)"
         value: ""
       - name: digitalocean-token
         description: "DigitalOcean API token (for DigitalOcean API provider)"
+        value: ""
+      - name: atlas-public-key
+        description: "MongoDB Atlas API public key (for Atlas provider)"
+        value: ""
+      - name: atlas-private-key
+        description: "MongoDB Atlas API private key (for Atlas provider)"
+        value: ""
+      - name: atlas-project-id
+        description: "MongoDB Atlas project ID (for Atlas provider)"
+        value: ""
+      - name: atlas-cluster-name
+        description: "MongoDB Atlas cluster name (for Atlas provider)"
         value: ""
 
   templates:
@@ -49,9 +47,9 @@ spec:
         - - name: deprovision-digitalocean
             template: deprovision-digitalocean-api
             when: "{{workflow.parameters.mongodb-provider}} == 'digitalocean_api'"
-        - - name: deprovision-mongodb-direct
-            template: deprovision-mongodb-direct
-            when: "{{workflow.parameters.mongodb-provider}} == 'mongodb_direct'"
+        - - name: deprovision-atlas
+            template: deprovision-atlas
+            when: "{{workflow.parameters.mongodb-provider}} == 'atlas'"
 
     #############################################################################
     # DigitalOcean Managed MongoDB (API-based)
@@ -124,87 +122,79 @@ spec:
           echo ""
           echo "MongoDB deprovisioning completed (DigitalOcean API)"
 
+
     #############################################################################
-    # MongoDB Direct Connection (self-hosted, Atlas with direct access)
+    # MongoDB Atlas (API-based using Atlas CLI)
     #############################################################################
-    - name: deprovision-mongodb-direct
+    - name: deprovision-atlas
       steps:
-        - - name: revoke-permissions
-            template: revoke-permissions
-        - - name: drop-user
-            template: drop-user
-        - - name: drop-database
-            template: drop-database
+        - - name: delete-user-atlas
+            template: delete-user-atlas
+        - - name: delete-database-atlas
+            template: delete-database-atlas
 
-    - name: revoke-permissions
+    - name: delete-user-atlas
       script:
-        image: mongo:6.0
+        image: debian:bookworm-slim
         command: [bash]
+        env:
+          - name: MCLI_PUBLIC_API_KEY
+            value: "{{workflow.parameters.atlas-public-key}}"
+          - name: MCLI_PRIVATE_API_KEY
+            value: "{{workflow.parameters.atlas-private-key}}"
+          - name: MCLI_PROJECT_ID
+            value: "{{workflow.parameters.atlas-project-id}}"
+          - name: MCLI_OPS_MANAGER_URL
+            value: "https://cloud.mongodb.com"
         source: |
           #!/bin/bash
-          set -e
+          set -euo pipefail
 
-          MONGO_URI="mongodb://{{workflow.parameters.mongodb-admin-user}}:{{workflow.parameters.mongodb-admin-password}}@{{workflow.parameters.mongodb-host}}:{{workflow.parameters.mongodb-port}}/{{workflow.parameters.mongodb-admin-database}}"
+          USERNAME="{{workflow.parameters.username}}"
+          PROJECT_ID="{{workflow.parameters.atlas-project-id}}"
 
-          echo "Revoking permissions for user: {{workflow.parameters.username}}"
-          mongosh "$MONGO_URI" --eval "
-            try {
-              db.revokeRolesFromUser('{{workflow.parameters.username}}', [
-                {role: 'readWrite', db: '{{workflow.parameters.database-name}}'}
-              ]);
-              print('Permissions revoked for {{workflow.parameters.username}}');
-            } catch (e) {
-              print('Error revoking permissions: ' + e.message);
-            }
-          "
+          # Install Atlas CLI from official MongoDB package
+          echo "Installing MongoDB Atlas CLI..."
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -y
+          apt-get install -y curl ca-certificates
 
-    - name: drop-user
+          ARCH=$(dpkg --print-architecture)
+          VERSION="1.28.0"
+          DEB_URL="https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_${VERSION}_linux_${ARCH}.deb"
+
+          curl -fsSL "$DEB_URL" -o /tmp/atlas-cli.deb
+          dpkg -i /tmp/atlas-cli.deb
+          atlas --version
+
+          echo ""
+          echo "Deleting Atlas database user: $USERNAME"
+
+          # Delete user using Atlas CLI
+          if atlas dbusers delete "$USERNAME" \
+            --projectId "$PROJECT_ID" \
+            --force \
+            --output json 2>&1; then
+            echo "User $USERNAME deleted successfully"
+          else
+            echo "User $USERNAME does not exist (already deleted)"
+          fi
+
+    - name: delete-database-atlas
       script:
-        image: mongo:6.0
-        command: [bash]
+        image: alpine:3.18
+        command: [sh]
         source: |
-          #!/bin/bash
+          #!/bin/sh
           set -e
 
-          MONGO_URI="mongodb://{{workflow.parameters.mongodb-admin-user}}:{{workflow.parameters.mongodb-admin-password}}@{{workflow.parameters.mongodb-host}}:{{workflow.parameters.mongodb-port}}/{{workflow.parameters.mongodb-admin-database}}"
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
 
-          echo "Dropping user: {{workflow.parameters.username}}"
-          mongosh "$MONGO_URI" --eval "
-            try {
-              db.dropUser('{{workflow.parameters.username}}');
-              print('User {{workflow.parameters.username}} dropped');
-            } catch (e) {
-              if (e.code === 11) {
-                print('User {{workflow.parameters.username}} does not exist');
-              } else {
-                print('Error dropping user: ' + e.message);
-                throw e;
-              }
-            }
-          "
-
-    - name: drop-database
-      script:
-        image: mongo:6.0
-        command: [bash]
-        source: |
-          #!/bin/bash
-          set -e
-
-          MONGO_URI="mongodb://{{workflow.parameters.mongodb-admin-user}}:{{workflow.parameters.mongodb-admin-password}}@{{workflow.parameters.mongodb-host}}:{{workflow.parameters.mongodb-port}}/{{workflow.parameters.mongodb-admin-database}}"
-
-          echo "Dropping database: {{workflow.parameters.database-name}}"
-          mongosh "$MONGO_URI" --eval "
-            try {
-              db = db.getSiblingDB('{{workflow.parameters.database-name}}');
-              db.dropDatabase();
-              print('Database {{workflow.parameters.database-name}} dropped');
-            } catch (e) {
-              print('Error dropping database {{workflow.parameters.database-name}}: ' + e.message);
-            }
-          "
-
-          echo "MongoDB deprovisioning completed successfully (Direct Connection)!"
-          echo "- Database: {{workflow.parameters.database-name}} (dropped)"
-          echo "- User: {{workflow.parameters.username}} (dropped)"
-          echo "- Namespace: {{workflow.parameters.namespace}}"
+          echo "Atlas database cleanup: $DATABASE_NAME"
+          echo ""
+          echo "Atlas does not support database deletion via CLI/API."
+          echo "  Databases are automatically removed when all collections are deleted."
+          echo ""
+          echo "MongoDB Atlas deprovisioning completed"
+          echo "- User: {{workflow.parameters.username}} (deleted)"
+          echo "- Database: $DATABASE_NAME (auto-removed when empty)"

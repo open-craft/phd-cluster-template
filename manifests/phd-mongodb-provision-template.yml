@@ -22,26 +22,26 @@ spec:
         description: "Database username to create"
       - name: password
         description: "Password for the database user"
-      - name: mongodb-host
-        description: "MongoDB host"
-      - name: mongodb-port
-        description: "MongoDB port"
-        value: "27017"
-      - name: mongodb-admin-user
-        description: "MongoDB admin username"
-      - name: mongodb-admin-password
-        description: "MongoDB admin password"
-      - name: mongodb-admin-database
-        description: "MongoDB admin database"
-        value: "admin"
       - name: mongodb-provider
-        description: "MongoDB provider type (digitalocean_api, mongodb_direct, atlas)"
-        value: "mongodb_direct"
+        description: "MongoDB provider type (digitalocean_api, atlas)"
+        value: "digitalocean_api"
       - name: mongodb-cluster-id
         description: "MongoDB cluster ID (for DigitalOcean API provider)"
         value: ""
       - name: digitalocean-token
         description: "DigitalOcean API token (for DigitalOcean API provider)"
+        value: ""
+      - name: atlas-public-key
+        description: "MongoDB Atlas API public key (for Atlas provider)"
+        value: ""
+      - name: atlas-private-key
+        description: "MongoDB Atlas API private key (for Atlas provider)"
+        value: ""
+      - name: atlas-project-id
+        description: "MongoDB Atlas project ID (for Atlas provider)"
+        value: ""
+      - name: atlas-cluster-name
+        description: "MongoDB Atlas cluster name (for Atlas provider)"
         value: ""
 
   templates:
@@ -51,9 +51,6 @@ spec:
         - - name: provision-digitalocean
             template: provision-digitalocean-api
             when: "{{workflow.parameters.mongodb-provider}} == 'digitalocean_api'"
-        - - name: provision-mongodb-direct
-            template: provision-mongodb-direct
-            when: "{{workflow.parameters.mongodb-provider}} == 'mongodb_direct'"
         - - name: provision-atlas
             template: provision-atlas
             when: "{{workflow.parameters.mongodb-provider}} == 'atlas'"
@@ -163,19 +160,20 @@ spec:
           echo ""
           echo "MongoDB provisioning completed (DigitalOcean API)"
 
-    #############################################################################
-    # MongoDB Direct Connection (self-hosted or Atlas with direct access)
-    #############################################################################
-    - name: provision-mongodb-direct
-      steps:
-        - - name: validate-mongodb-config
-            template: validate-mongodb-direct-config
-        - - name: create-databases-direct
-            template: create-databases-mongodb-direct
-        - - name: create-user-direct
-            template: create-user-mongodb-direct
 
-    - name: validate-mongodb-direct-config
+    #############################################################################
+    # MongoDB Atlas
+    #############################################################################
+    - name: provision-atlas
+      steps:
+        - - name: validate-atlas-config
+            template: validate-atlas-config
+        - - name: create-database-atlas
+            template: create-database-atlas
+        - - name: create-user-atlas
+            template: create-user-atlas
+
+    - name: validate-atlas-config
       script:
         image: alpine:3.18
         command: [sh]
@@ -183,129 +181,145 @@ spec:
           #!/bin/sh
           set -e
 
-          HOST="{{workflow.parameters.mongodb-host}}"
-          ADMIN_USER="{{workflow.parameters.mongodb-admin-user}}"
-          ADMIN_PASSWORD="{{workflow.parameters.mongodb-admin-password}}"
+          PUBLIC_KEY="{{workflow.parameters.atlas-public-key}}"
+          PRIVATE_KEY="{{workflow.parameters.atlas-private-key}}"
+          PROJECT_ID="{{workflow.parameters.atlas-project-id}}"
+          CLUSTER_NAME="{{workflow.parameters.atlas-cluster-name}}"
 
-          if [ -z "$HOST" ]; then
-            echo "Error: mongodb-host is required for mongodb_direct provider"
+          if [ -z "$PUBLIC_KEY" ]; then
+            echo "Error: atlas-public-key is required for atlas provider"
             exit 1
           fi
 
-          if [ -z "$ADMIN_USER" ]; then
-            echo "Error: mongodb-admin-user is required for mongodb_direct provider"
+          if [ -z "$PRIVATE_KEY" ]; then
+            echo "Error: atlas-private-key is required for atlas provider"
             exit 1
           fi
 
-          if [ -z "$ADMIN_PASSWORD" ]; then
-            echo "Error: mongodb-admin-password is required for mongodb_direct provider"
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Error: atlas-project-id is required for atlas provider"
             exit 1
           fi
 
-          echo "MongoDB direct connection configuration validated"
+          if [ -z "$CLUSTER_NAME" ]; then
+            echo "Error: atlas-cluster-name is required for atlas provider"
+            exit 1
+          fi
 
-    - name: create-databases-mongodb-direct
+          echo "MongoDB Atlas configuration validated"
+          echo "- Project ID: $PROJECT_ID"
+          echo "- Cluster: $CLUSTER_NAME"
+
+    - name: create-database-atlas
       script:
-        image: mongo:7.0
-        command: [sh]
+        image: debian:bookworm-slim
+        command: [bash]
+        env:
+          - name: MCLI_PUBLIC_API_KEY
+            value: "{{workflow.parameters.atlas-public-key}}"
+          - name: MCLI_PRIVATE_API_KEY
+            value: "{{workflow.parameters.atlas-private-key}}"
+          - name: MCLI_PROJECT_ID
+            value: "{{workflow.parameters.atlas-project-id}}"
+          - name: MCLI_OPS_MANAGER_URL
+            value: "https://cloud.mongodb.com"
         source: |
-          #!/bin/sh
-          set -e
+          #!/bin/bash
+          set -euo pipefail
 
           DATABASE_NAME="{{workflow.parameters.database-name}}"
-          MONGODB_HOST="{{workflow.parameters.mongodb-host}}"
-          MONGODB_PORT="{{workflow.parameters.mongodb-port}}"
-          ADMIN_USER="{{workflow.parameters.mongodb-admin-user}}"
-          ADMIN_PASSWORD="{{workflow.parameters.mongodb-admin-password}}"
-          ADMIN_DATABASE="{{workflow.parameters.mongodb-admin-database}}"
+          PROJECT_ID="{{workflow.parameters.atlas-project-id}}"
+          CLUSTER_NAME="{{workflow.parameters.atlas-cluster-name}}"
 
-          echo "Creating database via MongoDB connection: $DATABASE_NAME"
+          # Install Atlas CLI from official MongoDB package
+          echo "Installing MongoDB Atlas CLI..."
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -y
+          apt-get install -y curl ca-certificates
 
-          # MongoDB connection string
-          MONGO_URI="mongodb://${ADMIN_USER}:${ADMIN_PASSWORD}@${MONGODB_HOST}:${MONGODB_PORT}/${ADMIN_DATABASE}"
+          # Detect architecture
+          ARCH=$(dpkg --print-architecture)
+          VERSION="1.28.0"
+          DEB_URL="https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_${VERSION}_linux_${ARCH}.deb"
 
-          # Create database (implicit by inserting a document)
-          echo "Creating database: $DATABASE_NAME"
-          mongosh "$MONGO_URI" --quiet --eval "
-            use $DATABASE_NAME;
-            db.createCollection('_init');
-            print('Database $DATABASE_NAME created/verified');
-          " || {
-            echo "Failed to create database $DATABASE_NAME"
-            exit 1
-          }
+          curl -fsSL "$DEB_URL" -o /tmp/atlas-cli.deb
+          dpkg -i /tmp/atlas-cli.deb
+          atlas --version
 
-    - name: create-user-mongodb-direct
+          echo ""
+          echo "Verifying Atlas cluster: $CLUSTER_NAME"
+          atlas clusters describe "$CLUSTER_NAME" \
+            --projectId "$PROJECT_ID" \
+            --output json >/dev/null
+
+          echo ""
+          echo "Cluster verified: $CLUSTER_NAME"
+          echo "Database '$DATABASE_NAME' will be created automatically on first write."
+
+    - name: create-user-atlas
       script:
-        image: mongo:7.0
-        command: [sh]
+        image: debian:bookworm-slim
+        command: [bash]
+        env:
+          - name: MCLI_PUBLIC_API_KEY
+            value: "{{workflow.parameters.atlas-public-key}}"
+          - name: MCLI_PRIVATE_API_KEY
+            value: "{{workflow.parameters.atlas-private-key}}"
+          - name: MCLI_PROJECT_ID
+            value: "{{workflow.parameters.atlas-project-id}}"
+          - name: MCLI_OPS_MANAGER_URL
+            value: "https://cloud.mongodb.com"
         source: |
-          #!/bin/sh
-          set -e
+          #!/bin/bash
+          set -euo pipefail
 
           USERNAME="{{workflow.parameters.username}}"
           PASSWORD="{{workflow.parameters.password}}"
           DATABASE_NAME="{{workflow.parameters.database-name}}"
-          MONGODB_HOST="{{workflow.parameters.mongodb-host}}"
-          MONGODB_PORT="{{workflow.parameters.mongodb-port}}"
-          ADMIN_USER="{{workflow.parameters.mongodb-admin-user}}"
-          ADMIN_PASSWORD="{{workflow.parameters.mongodb-admin-password}}"
-          ADMIN_DATABASE="{{workflow.parameters.mongodb-admin-database}}"
+          PROJECT_ID="{{workflow.parameters.atlas-project-id}}"
 
-          echo "Creating user via MongoDB connection: $USERNAME"
+          # Install Atlas CLI from official MongoDB package
+          echo "Installing MongoDB Atlas CLI..."
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -y
+          apt-get install -y curl ca-certificates
 
-          # MongoDB connection string
-          MONGO_URI="mongodb://${ADMIN_USER}:${ADMIN_PASSWORD}@${MONGODB_HOST}:${MONGODB_PORT}/${ADMIN_DATABASE}"
+          ARCH=$(dpkg --print-architecture)
+          VERSION="1.28.0"
+          DEB_URL="https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_${VERSION}_linux_${ARCH}.deb"
 
-          # Create user with access to database
-          mongosh "$MONGO_URI" --quiet --eval "
-            use $ADMIN_DATABASE;
-
-            // Check if user exists
-            var userExists = db.getUser('$USERNAME');
-
-            if (userExists) {
-              print('User $USERNAME already exists, updating...');
-              db.updateUser('$USERNAME', {
-                pwd: '$PASSWORD',
-                roles: [
-                  { role: 'readWrite', db: '$DATABASE_NAME' }
-                ]
-              });
-              print('User $USERNAME updated successfully');
-            } else {
-              db.createUser({
-                user: '$USERNAME',
-                pwd: '$PASSWORD',
-                roles: [
-                  { role: 'readWrite', db: '$DATABASE_NAME' }
-                ]
-              });
-              print('User $USERNAME created successfully');
-            }
-          " || {
-            echo "Failed to create/update user $USERNAME"
-            exit 1
-          }
+          curl -fsSL "$DEB_URL" -o /tmp/atlas-cli.deb
+          dpkg -i /tmp/atlas-cli.deb
+          atlas --version
 
           echo ""
-          echo "MongoDB provisioning completed (Direct Connection)"
-          echo "- Host: $MONGODB_HOST:$MONGODB_PORT"
+          echo "Creating Atlas database user: $USERNAME"
+
+          # Try to create the user
+          if atlas dbusers create \
+            --username "$USERNAME" \
+            --password "$PASSWORD" \
+            --role "readWrite@$DATABASE_NAME" \
+            --projectId "$PROJECT_ID" \
+            --output json 2>&1; then
+            echo "User $USERNAME created successfully"
+          else
+            # User might already exist, try to update
+            echo "User may exist, attempting update..."
+            if atlas dbusers update "$USERNAME" \
+              --password "$PASSWORD" \
+              --role "readWrite@$DATABASE_NAME" \
+              --projectId "$PROJECT_ID" \
+              --output json 2>&1; then
+              echo "User $USERNAME updated successfully"
+            else
+              echo "✗ Failed to create/update user $USERNAME"
+              exit 1
+            fi
+          fi
+
+          echo ""
+          echo "MongoDB Atlas provisioning completed"
+          echo "- Project: $PROJECT_ID"
           echo "- Database: $DATABASE_NAME"
-          echo "- Username: $USERNAME"
-
-    #############################################################################
-    # MongoDB Atlas (API-based, future implementation)
-    #############################################################################
-    - name: provision-atlas
-      script:
-        image: alpine:3.18
-        command: [sh]
-        source: |
-          #!/bin/sh
-          set -e
-
-          echo "MongoDB Atlas provisioning is not yet implemented"
-          echo "Please use 'mongodb_direct' provider with Atlas connection string"
-          echo "Or contribute an Atlas API implementation!"
-          exit 1
+          echo "- User: $USERNAME (readWrite)"
