@@ -141,6 +141,15 @@ jobs:
           name: tutor-env-${{ inputs.INSTANCE_NAME }}
           path: instances/${{ inputs.INSTANCE_NAME }}/env
 
+      - name: Remove existing env directory before staging
+        run: |
+          set -euo pipefail
+          if [ -d "instances/${{ inputs.INSTANCE_NAME }}/env" ]; then
+            rm -rf "instances/${{ inputs.INSTANCE_NAME }}/env"
+          fi
+          mkdir -p "instances/${{ inputs.INSTANCE_NAME }}"
+          mv tutor-env-${{ inputs.INSTANCE_NAME }}/* "instances/${{ inputs.INSTANCE_NAME }}/env" || true
+
       - name: Update config.yml with image tag
         env:
           CONFIG_FILE: instances/${{ inputs.INSTANCE_NAME }}/config.yml
@@ -167,8 +176,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          git add instances/$INSTANCE_NAME/config.yml
-          git add instances/$INSTANCE_NAME/env
+          git add -A instances/$INSTANCE_NAME
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
