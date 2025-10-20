@@ -133,13 +133,6 @@ jobs:
         run: |
           tutor picasso run-extra-commands
 
-      - name: Ensure clean env directory before packaging
-        run: |
-          set -euo pipefail
-          if [ -d "${{ env.TUTOR_ROOT }}/env" ]; then
-            rm -rf "${{ env.TUTOR_ROOT }}/env"
-          fi
-
       - name: Upload env folder as artifact
         uses: actions/upload-artifact@v4
         with:

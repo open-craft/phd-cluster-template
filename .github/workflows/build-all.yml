@@ -148,20 +148,17 @@ jobs:
       - name: Install PyYAML
         run: pip install pyyaml
 
+      - name: Prepare env directory
+        run: |
+          set -euo pipefail
+          rm -rf "instances/${{ inputs.INSTANCE_NAME }}/env"
+          mkdir -p "instances/${{ inputs.INSTANCE_NAME }}/env"
+
       - name: Download env artifact
         uses: actions/download-artifact@v4
         with:
           name: tutor-env-${{ inputs.INSTANCE_NAME }}
           path: instances/${{ inputs.INSTANCE_NAME }}/env
-
-      - name: Remove existing env directory before staging
-        run: |
-          set -euo pipefail
-          if [ -d "instances/${{ inputs.INSTANCE_NAME }}/env" ]; then
-            rm -rf "instances/${{ inputs.INSTANCE_NAME }}/env"
-          fi
-          mkdir -p "instances/${{ inputs.INSTANCE_NAME }}"
-          mv tutor-env-${{ inputs.INSTANCE_NAME }}/* "instances/${{ inputs.INSTANCE_NAME }}/env" || true
 
       - name: Update config.yml with all service image tags
         env:
