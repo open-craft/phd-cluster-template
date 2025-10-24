@@ -3,16 +3,35 @@ kind: Application
 metadata:
   name: "{{cookiecutter.instance_slug}}-{{cookiecutter.environment}}"
   namespace: argocd
+  labels:
+    app.kubernetes.io/name: "{{cookiecutter.instance_slug}}"
+    app.kubernetes.io/instance: "{{cookiecutter.environment}}"
+    app.kubernetes.io/managed-by: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: "{{cookiecutter.instance_slug}}"
-  project: "default"
+  project: default
   source:
     path: "instances/{{cookiecutter.instance_slug}}/env"
     repoURL: "{{cookiecutter.cluster_repository}}"
     targetRevision: "{{cookiecutter.cluster_repository_branch}}"
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: "{{cookiecutter.instance_slug}}"
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

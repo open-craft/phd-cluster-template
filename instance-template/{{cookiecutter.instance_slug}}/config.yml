@@ -40,16 +40,20 @@ RUN_MYSQL: false
 MYSQL_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
 MYSQL_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
 MYSQL_PASSWORD: "{{ generate_password() }}"
-MYSQL_HOST: "{{ env('PHD_MYSQL_HOST') | default('mysql') }}"
-MYSQL_PORT: "{{ env('PHD_MYSQL_PORT') | default('3306') }}"
+MYSQL_HOST: "{{ env('PHD_MYSQL_HOST') or 'mysql' }}"
+MYSQL_PORT: "{{ env('PHD_MYSQL_PORT') or '3306' }}"
 
 # MongoDB configuration
 RUN_MONGODB: false
 MONGODB_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
 MONGODB_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
 MONGODB_PASSWORD: "{{ generate_password() }}"
-MONGODB_HOST: "{{ env('PHD_MONGODB_HOST') | default('mongodb') }}"
-MONGODB_PORT: "{{ env('PHD_MONGODB_PORT') | default('27017') }}"
+MONGODB_HOST: "{{ env('PHD_MONGODB_HOST') or 'mongodb' }}"
+MONGODB_PORT: "{{ env('PHD_MONGODB_PORT') or '27017' }}"
+MONGODB_USE_SSL: true
+MONGODB_AUTH_MECHANISM: "SCRAM-SHA-1"
+MONGODB_AUTH_SOURCE: "{{ env('PHD_MONGODB_AUTH_SOURCE') or 'admin' }}"
+MONGODB_REPLICA_SET: "{{ env('PHD_MONGODB_REPLICA_SET') or '' }}"
 
 # Storage configuration
 STORAGE_BUCKET_NAME: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"

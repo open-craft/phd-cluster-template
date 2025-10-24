@@ -12,6 +12,7 @@ import pytest
 from phd.exceptions import CommandNotFoundError, ConfigurationError
 from phd.utils import (
     ColoredFormatter,
+    build_instance_config,
     check_command_installed,
     check_env_var_set,
     get_logger,
@@ -412,3 +413,52 @@ class TestSanitizeUsername:
     def test_only_invalid_raises(self):
         with pytest.raises(ValueError):
             sanitize_username("@@@@")
+
+
+class TestBuildInstanceConfigMongoDB:
+    """
+    Tests for MongoDB parameter extraction in build_instance_config.
+    """
+
+    def test_mongodb_connection_params_extracted(self):
+        """
+        Test that all MongoDB connection parameters are extracted correctly.
+        """
+        config = {
+            "MONGODB_DATABASE": "testdb",
+            "MONGODB_USERNAME": "user",
+            "MONGODB_PASSWORD": "pass",
+            "MONGODB_HOST": "mongo.example.com",
+            "MONGODB_PORT": "27017",
+            "MONGODB_USE_SSL": True,
+            "MONGODB_AUTH_MECHANISM": "SCRAM-SHA-1",
+            "MONGODB_AUTH_SOURCE": "admin",
+            "MONGODB_REPLICA_SET": "rs0",
+        }
+
+        result = build_instance_config("inst", config)
+
+        assert result["PHD_INSTANCE_MONGODB_DATABASE"] == "testdb"
+        assert result["PHD_INSTANCE_MONGODB_USERNAME"] == "user"
+        assert result["PHD_INSTANCE_MONGODB_PASSWORD"] == "pass"
+        assert result["PHD_INSTANCE_MONGODB_HOST"] == "mongo.example.com"
+        assert result["PHD_INSTANCE_MONGODB_PORT"] == "27017"
+        assert result["PHD_INSTANCE_MONGODB_AUTH_SOURCE"] == "admin"
+        assert result["PHD_INSTANCE_MONGODB_REPLICA_SET"] == "rs0"
+
+    def test_mongodb_empty_values_handled(self):
+        """
+        Test that empty or missing MongoDB values return empty strings.
+        """
+        config = {
+            "MONGODB_DATABASE": "testdb",
+            "MONGODB_USERNAME": "user",
+            "MONGODB_PASSWORD": "pass",
+        }
+
+        result = build_instance_config("inst", config)
+
+        assert result["PHD_INSTANCE_MONGODB_HOST"] == ""
+        assert result["PHD_INSTANCE_MONGODB_PORT"] == ""
+        assert result["PHD_INSTANCE_MONGODB_AUTH_SOURCE"] == ""
+        assert result["PHD_INSTANCE_MONGODB_REPLICA_SET"] == ""

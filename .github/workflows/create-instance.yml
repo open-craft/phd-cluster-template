@@ -47,21 +47,25 @@ on:
       PHD_DOCKER_REGISTRY_CREDENTIALS:
         required: true
       PHD_MYSQL_HOST:
-        required: true
+        required: false
       PHD_MYSQL_PORT:
-        required: true
+        required: false
       PHD_MYSQL_ROOT_USER:
         required: true
       PHD_MYSQL_ROOT_PASSWORD:
         required: true
       PHD_MONGODB_HOST:
-        required: true
+        required: false
       PHD_MONGODB_PORT:
-        required: true
+        required: false
       PHD_MONGODB_PROVIDER:
         required: true
       PHD_MONGODB_CLUSTER_ID:
         required: true
+      PHD_MONGODB_REPLICA_SET:
+        required: false
+      PHD_MONGODB_AUTH_SOURCE:
+        required: false
       PHD_DIGITALOCEAN_TOKEN:
         required: true
       PHD_STORAGE_TYPE:
@@ -150,6 +154,8 @@ jobs:
           PHD_MONGODB_PORT: ${{ secrets.PHD_MONGODB_PORT }}
           PHD_MONGODB_PROVIDER: ${{ secrets.PHD_MONGODB_PROVIDER }}
           PHD_MONGODB_CLUSTER_ID: ${{ secrets.PHD_MONGODB_CLUSTER_ID }}
+          PHD_MONGODB_REPLICA_SET: ${{ secrets.PHD_MONGODB_REPLICA_SET }}
+          PHD_MONGODB_AUTH_SOURCE: ${{ secrets.PHD_MONGODB_AUTH_SOURCE }}
           PHD_DIGITALOCEAN_TOKEN: ${{ secrets.PHD_DIGITALOCEAN_TOKEN }}
           PHD_STORAGE_TYPE: ${{ secrets.PHD_STORAGE_TYPE }}
           PHD_STORAGE_REGION: ${{ secrets.PHD_STORAGE_REGION }}

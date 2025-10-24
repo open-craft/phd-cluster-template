@@ -287,12 +287,21 @@ def build_instance_config(  # pylint: disable=too-many-locals,too-many-positiona
         }
     )
 
-    # MongoDB DigitalOcean parameters
+    # MongoDB connection parameters
     instance_config.update(
         {
             "PHD_INSTANCE_MONGODB_DATABASE": config_data.get("MONGODB_DATABASE", ""),
             "PHD_INSTANCE_MONGODB_USERNAME": config_data.get("MONGODB_USERNAME", ""),
             "PHD_INSTANCE_MONGODB_PASSWORD": config_data.get("MONGODB_PASSWORD", ""),
+            "PHD_INSTANCE_MONGODB_HOST": config_data.get("MONGODB_HOST", ""),
+            "PHD_INSTANCE_MONGODB_PORT": config_data.get("MONGODB_PORT", ""),
+            "PHD_INSTANCE_MONGODB_AUTH_SOURCE": config_data.get(
+                "MONGODB_AUTH_SOURCE", ""
+            ),
+            "PHD_INSTANCE_MONGODB_REPLICA_SET": config_data.get(
+                "MONGODB_REPLICA_SET", ""
+            ),
+            # Provider-specific parameters (DigitalOcean, Atlas)
             "PHD_INSTANCE_MONGODB_PROVIDER": os.getenv("PHD_MONGODB_PROVIDER", ""),
             "PHD_INSTANCE_MONGODB_CLUSTER_ID": os.getenv("PHD_MONGODB_CLUSTER_ID", ""),
             "PHD_INSTANCE_DIGITALOCEAN_TOKEN": os.getenv("PHD_DIGITALOCEAN_TOKEN", ""),

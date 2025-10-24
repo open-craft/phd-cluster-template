@@ -55,6 +55,8 @@ jobs:
       PHD_MONGODB_PROVIDER: "{% raw %}${{ secrets.PHD_MONGODB_PROVIDER }}{% endraw %}"
       PHD_MONGODB_CLUSTER_ID: "{% raw %}${{ secrets.PHD_MONGODB_CLUSTER_ID }}{% endraw %}"
       PHD_DIGITALOCEAN_TOKEN: "{% raw %}${{ secrets.PHD_DIGITALOCEAN_TOKEN }}{% endraw %}"
+      PHD_MONGODB_REPLICA_SET: "{% raw %}${{ secrets.PHD_MONGODB_REPLICA_SET }}{% endraw %}"
+      PHD_MONGODB_AUTH_SOURCE: "{% raw %}${{ secrets.PHD_MONGODB_AUTH_SOURCE }}{% endraw %}"
       PHD_STORAGE_TYPE: "{% raw %}${{ secrets.PHD_STORAGE_TYPE }}{% endraw %}"
       PHD_STORAGE_REGION: "{% raw %}${{ secrets.PHD_STORAGE_REGION }}{% endraw %}"
       PHD_STORAGE_ACCESS_KEY_ID: "{% raw %}${{ secrets.PHD_STORAGE_ACCESS_KEY_ID }}{% endraw %}"

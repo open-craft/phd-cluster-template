@@ -567,6 +567,8 @@ For GitHub Actions, configure:
 - `PHD_MONGODB_PORT`: MongoDB server port (default: `27017`)
 - `PHD_MONGODB_ADMIN_USER`: MongoDB admin username
 - `PHD_MONGODB_ADMIN_PASSWORD`: MongoDB admin password
+- `PHD_MONGODB_REPLICA_SET`: MongoDB replica set name
+- `MONGODB_AUTH_SOURCE`: MongoDB auth source (default: `admin`)
 - `PHD_MONGODB_CLUSTER_ID`: (Optional) DigitalOcean MongoDB cluster ID for API-based management
 - `PHD_DIGITALOCEAN_TOKEN`: (Optional) DigitalOcean API token if using DO managed databases
 
