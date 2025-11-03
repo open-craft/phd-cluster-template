@@ -132,6 +132,7 @@ jobs:
       - name: Execute picasso extra commands
         run: |
           tutor picasso run-extra-commands
+          cat $(python -c 'from drydock import plugin; print(plugin.__file__)')
 
       - name: Upload env folder as artifact
         uses: actions/upload-artifact@v4
