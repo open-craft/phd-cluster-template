@@ -18,5 +18,7 @@
   "runner_workflow_label": [
     "ubuntu-latest",
     "self-hosted"
-  ]
+  ],
+  "tutor_version": "v20.0.2",
+  "do_region": "nyc3"
 }
