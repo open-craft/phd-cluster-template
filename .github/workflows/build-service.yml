@@ -51,7 +51,7 @@ on:
 jobs:
   build:
     name: Build with Picasso
-    uses: open-craft/picasso/.github/workflows/build.yml@gabor/add-ghcr-support
+    uses: eduNEXT/picasso/.github/workflows/build.yml@main
     permissions:
       packages: write
       contents: read
