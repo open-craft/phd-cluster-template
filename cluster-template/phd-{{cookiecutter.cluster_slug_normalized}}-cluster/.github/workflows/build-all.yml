@@ -11,10 +11,6 @@ on:
         description: "Branch to clone the strain from"
         default: "main"
         type: string
-      TUTOR_VERSION:
-        description: "Version of the tutor to use"
-        default: "{{ cookiecutter.tutor_version }}"
-        type: string
       PICASSO_VERSION:
         description: "Picasso version"
         default: "{{ cookiecutter.picasso_version }}"
@@ -42,7 +38,6 @@ jobs:
       INSTANCE_NAME: {% raw %}${{ inputs.INSTANCE_NAME }}{% endraw %}
       STRAIN_REPOSITORY: {% raw %}${{ github.repository }}{% endraw %}
       STRAIN_REPOSITORY_BRANCH: {% raw %}${{ inputs.STRAIN_REPOSITORY_BRANCH }}{% endraw %}
-      TUTOR_VERSION: {% raw %}${{ inputs.TUTOR_VERSION }}{% endraw %}
       PICASSO_VERSION: {% raw %}${{ inputs.PICASSO_VERSION }}{% endraw %}
       PHD_CLI_VERSION: {% raw %}${{ inputs.PHD_CLI_VERSION }}{% endraw %}
       RUNNER_WORKFLOW_LABEL: {% raw %}${{ inputs.RUNNER_WORKFLOW_LABEL }}{% endraw %}
