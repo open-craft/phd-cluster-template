@@ -16,10 +16,6 @@ on:
         description: "Branch to clone the strain from"
         required: true
         type: string
-      TUTOR_VERSION:
-        description: "Version of the tutor to use"
-        required: true
-        type: string
       PICASSO_VERSION:
         description: "Picasso version"
         required: true
@@ -55,9 +51,7 @@ jobs:
       SERVICE: openedx
       STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
       STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
-      TUTOR_VERSION: ${{ inputs.TUTOR_VERSION }}
       PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
-      PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
 
   build-mfe:
@@ -76,9 +70,7 @@ jobs:
       SERVICE: mfe
       STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
       STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
-      TUTOR_VERSION: ${{ inputs.TUTOR_VERSION }}
       PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
-      PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
 
   generate-env-dir:
@@ -91,12 +83,8 @@ jobs:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     with:
       INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
-      # Use openedx service for env generation (either service works, we just need one)
-      SERVICE: openedx
-      IMAGE_TAG: ${{ needs.build-openedx.outputs.image_tag }}
       STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
       STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
-      TUTOR_VERSION: ${{ inputs.TUTOR_VERSION }}
       PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
       PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}

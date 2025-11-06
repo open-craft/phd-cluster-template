@@ -19,16 +19,8 @@ on:
         description: "Branch to clone the strain from"
         required: true
         type: string
-      TUTOR_VERSION:
-        description: "Version of the tutor to use"
-        required: true
-        type: string
       PICASSO_VERSION:
         description: "Picasso version"
-        required: true
-        type: string
-      PHD_CLI_VERSION:
-        description: "PHD CLI version"
         required: true
         type: string
       RUNNER_WORKFLOW_LABEL:
