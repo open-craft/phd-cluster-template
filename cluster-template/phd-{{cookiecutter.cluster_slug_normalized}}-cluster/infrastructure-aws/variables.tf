@@ -10,14 +10,9 @@ variable "aws_secret_access_key" {
   sensitive   = true
 }
 
-variable "aws_region" {
-  type        = string
-  description = "AWS region to create the resources in."
-}
-
 variable "region" {
   type        = string
-  default     = "us-east-1"
+  default     = "{{ cookiecutter.cloud_region }}"
   description = "AWS region to create the resources in."
 }
 
