@@ -51,7 +51,7 @@ on:
 jobs:
   build:
     name: Build with Picasso
-    uses: open-craft/picasso/.github/workflows/build.yml@gabor/add-ghcr-support
+    uses: open-craft/picasso/.github/workflows/build.yml@kaustav/new_ghrc_test
     permissions:
       packages: write
       contents: read
