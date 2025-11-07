@@ -43,7 +43,7 @@ on:
 jobs:
   build:
     name: Build with Picasso
-    uses: eduNEXT/picasso/.github/workflows/build.yml@main
+    uses: open-craft/picasso/.github/workflows/build.yml@kaustav/new_ghcr_test
     permissions:
       packages: write
       contents: read

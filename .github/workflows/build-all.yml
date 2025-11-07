@@ -37,7 +37,7 @@ on:
 jobs:
   build-openedx:
     name: Build 'openedx' image
-    uses: open-craft/phd-cluster-template/.github/workflows/build-service.yml@main
+    uses: open-craft/phd-cluster-template/.github/workflows/build-service.yml@kaustav/new_ghrc_test
     permissions:
       packages: write
       contents: read
@@ -56,7 +56,7 @@ jobs:
 
   build-mfe:
     name: Build 'mfe' image
-    uses: open-craft/phd-cluster-template/.github/workflows/build-service.yml@main
+    uses: open-craft/phd-cluster-template/.github/workflows/build-service.yml@kaustav/new_ghrc_test
     permissions:
       packages: write
       contents: read
@@ -78,7 +78,7 @@ jobs:
       - build-openedx
       - build-mfe
     name: Generate Environment Directory
-    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@main
+    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@kaustav/new_ghrc_test
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     with:
