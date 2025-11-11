@@ -1,7 +1,0 @@
-TODO:
-
-- be able to disable https://github.com/eduNEXT/drydock/blob/81c4af34646ed4ff5776d3218edeadd883467a16/drydock/templates/drydock/task/mongodb/init
-- open picasso PR
-- open drydock PR
-- instance MONGODB settings are probably wrong
-- MySQL cannot connect

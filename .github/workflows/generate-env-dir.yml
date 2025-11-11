@@ -129,11 +129,6 @@ jobs:
           pip install git+https://github.com/eduNEXT/tutor-contrib-picasso@v0.2.0
           tutor plugins enable picasso
 
-      - name: Execute picasso extra commands
-        run: |
-          tutor picasso run-extra-commands
-          cat $(python -c 'from drydock import plugin; print(plugin.__file__)')
-
       - name: Upload env folder as artifact
         uses: actions/upload-artifact@v4
         with:
