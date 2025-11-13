@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     endpoints = {
-      s3 = "https://{{ cookiecutter.region }}.digitaloceanspaces.com"
+      s3 = "https://{{ cookiecutter.do_region }}.digitaloceanspaces.com"
     }
 
     bucket = "tfstate-phd-{{ cookiecutter.cluster_slug_normalized }}-cluster-{{ cookiecutter.environment }}"
