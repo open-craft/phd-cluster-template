@@ -1,0 +1,53 @@
+name: Pre-commit
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for pre-commit hooks
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: latest
+
+      - name: Install terraform-docs
+        run: |
+          TERRAFORM_DOCS_VERSION="0.20.0"
+          wget -q "https://github.com/terraform-docs/terraform-docs/releases/download/v${TERRAFORM_DOCS_VERSION}/terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+          tar -xzf "terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+          sudo mv terraform-docs /usr/local/bin/
+          rm "terraform-docs-v${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz"
+          terraform-docs --version
+
+      - name: Install pre-commit
+        run: |
+          pip install pre-commit
+
+      - uses: wagoid/commitlint-github-action@v6
+        with:
+          failOnWarnings: true # Strict mode
+          configFile: .github/.commitlintrc.mjs
+
+      - name: Run pre-commit
+        env:
+          PCT_TFPATH: tofu
+        run: |
+          pre-commit run --all-files

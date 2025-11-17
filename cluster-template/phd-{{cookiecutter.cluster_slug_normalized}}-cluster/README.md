@@ -6,43 +6,22 @@
 
 This repository serves as the home for the {{ cookiecutter.cluster_name }} cluster. All the necessary infrastructure, cluster, and instance configuration are living in this repository.
 
-{% if cookiecutter.cloud_provider == "aws" -%}
-## AWS
-
-{% elif cookiecutter.cloud_provider == "digitalocean" -%}
-## DigitalOcean
-
-{%- endif %}
-
-## Cluster
-
 ## Infrastructure Setup
 
-### Backend Configuration
+This cluster uses Terraform/OpenTofu with S3-compatible backends for state storage. Backend credentials suggested to be provided **via backend.hcl** to avoid storing sensitive information in state files.
 
-This cluster uses Terraform/OpenTofu with S3-compatible backends for state storage. **Backend credentials must be provided via environment variables** to avoid storing sensitive information in state files.
+The backend uses a `tfstate-phd-{{ cookiecutter.cluster_slug_normalized }}-cluster-{{ cookiecutter.environment }}` bucket to store its state. Make sure the bucket exists before applying changes. Also, ensure the user the Access Key belongs to has access to the bucket.
 
-#### Create Terraform State Bucket
+Create a new `backend.hcl` file in the infrastructure directory:
 
-The backend uses a `tfstate-phd-{{ cookiecutter.cluster_slug_normalized }}-cluster-{{ cookiecutter.environment }}` bucket to store its state. In case of `My Production Cluster`, it will be `tfstate-phd-my-cluster-production`.
-
-Ensure the user the Access Key belongs to has access to the bucket.
-
-#### Set Environment Variables
-
-**For AWS S3 backend:**
-```bash
-export AWS_ACCESS_KEY_ID="your-aws-access-key"
-export AWS_SECRET_ACCESS_KEY="your-aws-secret-key"
+```hcl
+bucket     = "tfstate-phd-{{ cookiecutter.cluster_slug_normalized }}-cluster-{{ cookiecutter.environment }}"
+key        = "terraform.tfstate"
+access_key = "<ACCESS KEY ID>"
+secret_key = "<SECRET ACCESS KEY>"
 ```
 
-**For DigitalOcean Spaces backend:**
-```bash
-export AWS_ACCESS_KEY_ID="your-spaces-access-key"
-export AWS_SECRET_ACCESS_KEY="your-spaces-secret-key"
-```
-
-#### Deploy Infrastructure
+### Deploy Infrastructure
 
 ```bash
 # Navigate to infrastructure directory
@@ -54,4 +33,14 @@ tofu plan
 tofu apply
 ```
 
-## Build
+## Repository Setup
+
+This repo uses [pre-commit](https://pre-commit.com/) to ensure the code is formatted and up to standards before it is being committed.
+
+Once pre-commit is installed, execute `pre-commit install` to setup the git commit hooks. Then, execute `pre-commit install -t commit-msg` to allow the `commit-msg` state.
+
+## Commit messages
+
+Commit messages are enforced by `pre-commit` and must conform the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) style. On top of that, the repository mandates to include a JIRA ticket in the commit message.
+
+To do so, commit your changes like `git commit -m "feat: add new instance config" -m "TASK-1234"` where `TASK-1234` is the ticket number. This will ensure the ticket number is not in the first line, but the commit still contains it.
