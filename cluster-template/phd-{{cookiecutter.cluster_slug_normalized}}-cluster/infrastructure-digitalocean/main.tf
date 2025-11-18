@@ -36,6 +36,8 @@ module "mysql_database" {
   source = "git::https://github.com/openedx/openedx-k8s-harmony.git//terraform/modules/digitalocean/database?ref=${local.harmony_terraform_module_version}"
 
   region                  = var.region
+  reg                     = "my_reg"
+  reg2                    = "{{ cookiecutter.region }}"
   environment             = local.kubernetes_cluster_environment
   access_token            = var.access_token
   vpc_id                  = module.main_vpc.vpc_id
