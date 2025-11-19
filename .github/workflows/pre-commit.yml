@@ -33,6 +33,15 @@ jobs:
           failOnWarnings: true # Strict mode
           configFile: .github/.commitlintrc.mjs
 
-      - uses: pre-commit/action@v3.0.1
+      - name: Run pre-commit on PRs
+        if: github.event_name == 'pull_request'
+        uses: pre-commit/action@v3.0.1
         env:
           PCT_TFPATH: tofu
+
+      - name: Run pre-commit on push to main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: pre-commit/action@v3.0.1
+        env:
+          PCT_TFPATH: tofu
+          SKIP: no-commit-to-branch
