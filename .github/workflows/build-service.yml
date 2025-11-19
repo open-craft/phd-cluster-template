@@ -74,4 +74,3 @@ jobs:
       # and have a single commit for the whole config update.
       UPDATE_IMAGE_TAG_IN_REPO: false
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
-

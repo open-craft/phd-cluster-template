@@ -606,7 +606,7 @@ For GitHub Actions, configure:
 
 This repo uses [pre-commit](https://pre-commit.com/) to ensure the code is formatted and up to standards before it is being committed.
 
-Once pre-commit is installed, execute `pre-commit install` to setup the git commit hooks.
+Once pre-commit is installed, execute `pre-commit install` to setup the git commit hooks. Then, execute `pre-commit install -t commit-msg` to allow the `commit-msg` state.
 
 ### Setting Up Development Environment
 
