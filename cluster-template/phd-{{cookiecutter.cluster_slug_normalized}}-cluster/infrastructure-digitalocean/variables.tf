@@ -18,7 +18,7 @@ variable "secret_access_key" {
 
 variable "region" {
   type        = string
-  default     = "nyc3"
+  default     = "{{ cookiecutter.cloud_region }}"
   description = "DigitalOcean region to create the resources in."
   validation {
     condition = contains([

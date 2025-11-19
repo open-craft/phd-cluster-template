@@ -15,10 +15,12 @@ logger = get_logger(__name__)
 DEFAULT_ENVIRONMENT = "production"
 DEFAULT_SHORT_DESCRIPTION = "Kubernetes cluster to host Open edX instances"
 DEFAULT_CLOUD_PROVIDER = None
+DEFAULT_CLOUD_REGION = None
 DEFAULT_HARMONY_MODULE_VERSION = None
 DEFAULT_OPENCRAFT_MODULE_VERSION = None
 DEFAULT_PICASSO_VERSION = None
 DEFAULT_TEMPLATE_VERSION = None
+DEFAULT_TUTOR_VERSION = None
 DEFAULT_GITHUB_ORGANIZATION = None
 DEFAULT_TEMPLATE_REPOSITORY = "https://github.com/open-craft/phd-cluster-template.git"
 
@@ -29,10 +31,12 @@ def create_cluster(  # pylint: disable=too-many-branches,too-many-arguments,too-
     environment: str = DEFAULT_ENVIRONMENT,
     short_description: str = DEFAULT_SHORT_DESCRIPTION,
     cloud_provider: str | None = DEFAULT_CLOUD_PROVIDER,
+    cloud_region: str | None = DEFAULT_CLOUD_REGION,
     harmony_module_version: str | None = DEFAULT_HARMONY_MODULE_VERSION,
     opencraft_module_version: str | None = DEFAULT_OPENCRAFT_MODULE_VERSION,
     picasso_version: str | None = DEFAULT_PICASSO_VERSION,
     template_version: str | None = DEFAULT_TEMPLATE_VERSION,
+    tutor_version: str | None = DEFAULT_TUTOR_VERSION,
     github_organization: str | None = DEFAULT_GITHUB_ORGANIZATION,
     github_repository: str | None = None,
     template_repository: str = DEFAULT_TEMPLATE_REPOSITORY,
@@ -47,10 +51,12 @@ def create_cluster(  # pylint: disable=too-many-branches,too-many-arguments,too-
         environment: Environment name (default: "production")
         short_description: Short description of the cluster
         cloud_provider: Cloud provider (aws or digitalocean)
+        cloud_region: Region of the chosen cloud provider
         harmony_module_version: Harmony module version/commit hash
         opencraft_module_version: OpenCraft module version
         picasso_version: Picasso version
         template_version: PHD cluster template version
+        tutor_version: Tutor version
         github_organization: Git organization name
         github_repository: Git repository URL (if not provided, will be auto-generated)
         template_repository: Git URL of the cluster template repository
@@ -98,6 +104,9 @@ def create_cluster(  # pylint: disable=too-many-branches,too-many-arguments,too-
     if cloud_provider:
         extra_context["cloud_provider"] = [cloud_provider]
 
+    if cloud_region:
+        extra_context["cloud_region"] = [cloud_region]
+
     if harmony_module_version:
         extra_context["harmony_module_version"] = harmony_module_version
 
@@ -109,6 +118,9 @@ def create_cluster(  # pylint: disable=too-many-branches,too-many-arguments,too-
 
     if template_version:
         extra_context["phd_cluster_template_version"] = template_version
+
+    if tutor_version:
+        extra_context["tutor_version"] = tutor_version
 
     if github_organization:
         extra_context["github_organization"] = github_organization
@@ -170,6 +182,11 @@ def main() -> None:
         help=f"Cloud provider (default: {DEFAULT_CLOUD_PROVIDER})",
     )
     parser.add_argument(
+        "--cloud-region",
+        default=DEFAULT_CLOUD_REGION,
+        help=f"Cloud provider region (default: {DEFAULT_CLOUD_REGION})",
+    )
+    parser.add_argument(
         "--harmony-module-version",
         default=DEFAULT_HARMONY_MODULE_VERSION,
         help=f"Harmony module version/commit hash (default: {DEFAULT_HARMONY_MODULE_VERSION})",
@@ -188,6 +205,11 @@ def main() -> None:
         "--template-version",
         default=DEFAULT_TEMPLATE_VERSION,
         help=f"PHD cluster template version (default: {DEFAULT_TEMPLATE_VERSION})",
+    )
+    parser.add_argument(
+        "--tutor-version",
+        default=DEFAULT_TUTOR_VERSION,
+        help=f"Tutor version (default: {DEFAULT_TUTOR_VERSION})",
     )
     parser.add_argument(
         "--github-organization",
@@ -219,10 +241,12 @@ def main() -> None:
             args.environment,
             args.short_description,
             args.cloud_provider,
+            args.cloud_region,
             args.harmony_module_version,
             args.opencraft_module_version,
             args.picasso_version,
             args.template_version,
+            args.tutor_version,
             args.github_organization,
             args.github_repository,
             args.template_repository,

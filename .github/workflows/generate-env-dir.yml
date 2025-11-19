@@ -7,24 +7,12 @@ on:
         description: "Instance to create"
         required: true
         type: string
-      SERVICE:
-        description: "Service to update"
-        required: true
-        type: string
-      IMAGE_TAG:
-        description: "Image tag to use for the service"
-        required: true
-        type: string
       STRAIN_REPOSITORY:
         description: "The repository for strains to checkout. It should follow the format: ORGANIZATION/REPO"
         required: true
         type: string
       STRAIN_REPOSITORY_BRANCH:
         description: "Branch to clone the strain from"
-        required: true
-        type: string
-      TUTOR_VERSION:
-        description: "Version of the tutor to use"
         required: true
         type: string
       PICASSO_VERSION:
