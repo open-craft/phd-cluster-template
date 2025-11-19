@@ -28,17 +28,11 @@ jobs:
         with:
           tofu_version: latest
 
-      - name: Install pre-commit
-        run: |
-          pip install pre-commit
-
       - uses: wagoid/commitlint-github-action@v6
         with:
           failOnWarnings: true # Strict mode
           configFile: .github/.commitlintrc.mjs
 
-      - name: Run pre-commit
+      - uses: pre-commit/action@v3.0.1
         env:
           PCT_TFPATH: tofu
-        run: |
-          pre-commit run --all-files

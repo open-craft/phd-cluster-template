@@ -37,8 +37,6 @@ jobs:
           failOnWarnings: true # Strict mode
           configFile: .github/.commitlintrc.mjs
 
-      - name: Run pre-commit
+      - uses: pre-commit/action@v3.0.1
         env:
           PCT_TFPATH: tofu
-        run: |
-          pre-commit run --all-files
