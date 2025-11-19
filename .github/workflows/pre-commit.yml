@@ -3,10 +3,10 @@ name: Pre-commit
 on:
   pull_request:
     branches:
-      - main
+      - kaustav/test_pre_commit_hook
   push:
     branches:
-      - main
+      - kaustav/test_pre_commit_hook
 
 jobs:
   pre-commit:
