@@ -236,6 +236,7 @@ def detect_local_template(  # pylint: disable=too-many-locals,too-many-nested-bl
 def build_instance_config(  # pylint: disable=too-many-locals,too-many-positional-arguments
     instance_name: str,
     config_data: dict,
+    k8s_api_bearer_token: str | None = None,
     platform_name: str | None = None,
     edx_platform_repository: str | None = None,
     edx_platform_version: str | None = None,
@@ -259,6 +260,9 @@ def build_instance_config(  # pylint: disable=too-many-locals,too-many-positiona
     instance_config = {
         "PHD_INSTANCE_NAME": instance_name,
     }
+
+    if k8s_api_bearer_token is not None:
+        instance_config["PHD_KUBERNETES_API_BEARER_TOKEN"] = k8s_api_bearer_token
 
     if platform_name is not None:
         instance_config["PHD_PLATFORM_NAME"] = platform_name
