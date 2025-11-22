@@ -134,6 +134,7 @@ spec:
           #!/bin/sh
           set -e
 
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
           USERNAME="{{workflow.parameters.username}}"
           MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
 
@@ -142,7 +143,7 @@ spec:
           RESPONSE=$(curl -s -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
-            -d "{\"name\": \"$USERNAME\"}" \
+            -d "{\"name\": \"$USERNAME\", \"settings\": {\"mongo_user_settings\": {\"databases\": [\"$DATABASE_NAME\"], \"role\": \"dbAdmin\"}}}" \
             "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users")
 
           if echo "$RESPONSE" | grep -q "\"name\":\"$USERNAME\""; then
