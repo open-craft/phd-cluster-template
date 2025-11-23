@@ -138,7 +138,7 @@ spec:
           USERNAME="{{workflow.parameters.username}}"
           MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
 
-          echo "Creating user via DigitalOcean API: $USERNAME"
+          echo "Creating user via DigitalOcean API: $USERNAME for database $DATABASE_NAME"
 
           RESPONSE=$(curl -s -X POST \
             -H "Content-Type: application/json" \
