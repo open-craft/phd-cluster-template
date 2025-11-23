@@ -66,6 +66,9 @@ def _install_argo_workflows_templates(cluster_config: ClusterConfig) -> None:
     """
     manifests_url = cluster_config.opencraft_manifests_url
 
+    logger.warning(f"Manifests URL being used is {manifests_url}")
+    logger.warning(f"Manifests version {cluster_config.opencraft_manifests_version}")
+
     templates = [
         "phd-mysql-provision-template.yml",
         "phd-mongodb-provision-template.yml",
