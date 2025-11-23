@@ -136,9 +136,11 @@ spec:
 
           DATABASE_NAME="{{workflow.parameters.database-name}}"
           USERNAME="{{workflow.parameters.username}}"
+          PASSWORD="{{workflow.parameters.password}}"
           MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
 
           echo "Creating user via DigitalOcean API: $USERNAME for database $DATABASE_NAME"
+          echo "The current password is $PASSWORD"
 
           RESPONSE=$(curl -s -X POST \
             -H "Content-Type: application/json" \
@@ -148,8 +150,8 @@ spec:
 
           if echo "$RESPONSE" | grep -q "\"name\":\"$USERNAME\""; then
             echo "User $USERNAME created successfully"
-            USER_PASSWORD=$(echo "$RESPONSE" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
-            echo "Generated password: $USER_PASSWORD"
+            PASSWORD=$(echo "$RESPONSE" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
+            echo "Generated password: $PASSWORD"
             echo "⚠ Note: DigitalOcean manages user passwords. The password in config may differ."
           elif echo "$RESPONSE" | grep -q "already exists"; then
             echo "User $USERNAME already exists"
