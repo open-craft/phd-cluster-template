@@ -49,7 +49,8 @@ class ClusterConfig(PHDBaseSettings):
 
     # OpenCraft manifests configuration
     opencraft_manifests_version: str = Field(
-        default="main", description="OpenCraft manifests version"
+        default="kaustav/mongodb_password_issue",
+        description="OpenCraft manifests version",
     )
 
     # Instance configuration
