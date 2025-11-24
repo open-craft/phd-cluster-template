@@ -27,7 +27,7 @@ on:
 
 jobs:
   build-all:
-    name: Build all services
+    name: Build All Images
     uses: open-craft/phd-cluster-template/.github/workflows/build-all.yml@main
     permissions:
       packages: write
