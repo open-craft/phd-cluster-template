@@ -3,6 +3,7 @@ Instance create command.
 """
 
 import argparse
+import base64
 import os
 import subprocess
 from pathlib import Path
@@ -40,6 +41,7 @@ DEFAULT_EDX_PLATFORM_VERSION = None
 DEFAULT_EDX_PLATFORM_REPOSITORY = None
 DEFAULT_TEMPLATE_REPOSITORY = "https://github.com/open-craft/phd-cluster-template.git"
 DEFAULT_TEMPLATE_VERSION = None
+PHD_MONGODB_USER_PASSWORD_SECRET = "phd-mongodb-user-password"
 
 
 def _ensure_argo_workflows_installed() -> None:
@@ -382,6 +384,45 @@ def _create_argocd_application(instance_name: str, instances_dir: Path) -> None:
     )
 
 
+def _update_mongodb_password(
+    instance_name: str,
+    config_data: dict,
+    config_file: Path,
+    k8s_client: KubernetesClient,
+):
+    """
+    Update MongoDB password in the instance config.
+
+    Fetches the password from the k8s secret created by the provisioning workflow.
+    Updates the MongoDB password in the config file.
+    Deletes the secret.
+
+    Args:
+        instance_name (str): The instance name
+        config_data (dict): Existing config data
+        config_file (Path): Instance config file to update
+        k8s_client (KubernetesClient): Kubernetes client
+    """
+    try:
+        mongodb_password_data = k8s_client.read_secret(
+            PHD_MONGODB_USER_PASSWORD_SECRET, instance_name
+        ).data
+        mongodb_password = base64.b64decode(
+            mongodb_password_data[PHD_MONGODB_USER_PASSWORD_SECRET]
+        ).decode("utf-8")
+        config_data["MONGODB_PASSWORD"] = mongodb_password
+        with open(config_file, "w", encoding="utf-8") as f:
+            yaml.safe_dump(config_data, f, sort_keys=False)
+        k8s_client.delete_secret(PHD_MONGODB_USER_PASSWORD_SECRET, instance_name)
+    except KubernetesError as e:
+        logger.info(
+            "Failed to read secret %s for namespace %s: %s",
+            PHD_MONGODB_USER_PASSWORD_SECRET,
+            instance_name,
+            e,
+        )
+
+
 def create_instance(  # pylint: disable=too-many-positional-arguments
     instance_name: str,
     template_repository: str | None = DEFAULT_TEMPLATE_REPOSITORY,
@@ -460,6 +501,7 @@ def create_instance(  # pylint: disable=too-many-positional-arguments
     instance_config = build_instance_config(
         instance_name,
         config_data,
+        k8s_api_bearer_token=k8s_client.get_api_bearer_token(),
         platform_name=platform_name,
         edx_platform_repository=edx_platform_repository,
         edx_platform_version=edx_platform_version,
@@ -469,6 +511,8 @@ def create_instance(  # pylint: disable=too-many-positional-arguments
     _create_provision_workflows(
         k8s_client, instance_name, manifests_url, instance_config
     )
+
+    _update_mongodb_password(instance_name, config_data, config_file, k8s_client)
 
     _create_argocd_application(instance_name, instances_dir)
 

@@ -33,6 +33,24 @@ class KubernetesClient:
         self._rbac_v1 = client.RbacAuthorizationV1Api()
         self._logger = get_logger(__name__)
 
+    def get_api_bearer_token(self) -> str:
+        """
+        Get a valid kuberetes API bearer token
+
+        Raises:
+            KubernetesError: If bearer token not present in auth settings
+
+        Returns:
+            str: The API bearer token
+        """
+        auth_settings = self._api_client.configuration.auth_settings()
+        try:
+            return auth_settings.get("BearerToken")["value"]
+        except Exception as e:
+            raise KubernetesError(
+                f"Failed to get bearer token from auth settings: {e}"
+            ) from e
+
     def __get_manifest_from_url(self, url: str) -> str:
         """
         Get a Kubernetes manifest from a URL.

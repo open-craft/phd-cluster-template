@@ -43,6 +43,9 @@ spec:
       - name: atlas-cluster-name
         description: "MongoDB Atlas cluster name (for Atlas provider)"
         value: ""
+      - name: k8s-api-bearer-token
+        description: "Kubernetes API bearer token"
+        value: ""
 
   templates:
     - name: main
@@ -134,27 +137,45 @@ spec:
           #!/bin/sh
           set -e
 
+          NAMESPACE="{{workflow.parameters.namespace}}"
+          DATABASE_NAME="{{workflow.parameters.database-name}}"
           USERNAME="{{workflow.parameters.username}}"
+          PASSWORD="{{workflow.parameters.password}}"
           MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
+          K8s_API_BEARER_TOKEN="{{workflow.parameters.k8s-api-bearer-token}}"
 
           echo "Creating user via DigitalOcean API: $USERNAME"
 
           RESPONSE=$(curl -s -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
-            -d "{\"name\": \"$USERNAME\"}" \
+            -d "{\"name\": \"$USERNAME\", \"settings\": {\"mongo_user_settings\": {\"databases\": [\"$DATABASE_NAME\"], \"role\": \"dbAdmin\"}}}" \
             "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users")
 
           if echo "$RESPONSE" | grep -q "\"name\":\"$USERNAME\""; then
             echo "User $USERNAME created successfully"
-            USER_PASSWORD=$(echo "$RESPONSE" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
-            echo "Generated password: $USER_PASSWORD"
-            echo "⚠ Note: DigitalOcean manages user passwords. The password in config may differ."
+            PASSWORD=$(echo "$RESPONSE" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
           elif echo "$RESPONSE" | grep -q "already exists"; then
             echo "User $USERNAME already exists"
           else
             echo "Failed to create user $USERNAME: $RESPONSE"
             exit 1
+          fi
+
+          echo "Saving MongoDB user password to kubernetes secret"
+
+          K8S_RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: $K8s_API_BEARER_TOKEN" \
+            --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+            -d "{\"apiVersion\": \"v1\",\"kind\": \"Secret\",\"metadata\": {\"name\": \"phd-mongodb-user-password\",\"namespace\": \"$NAMESPACE\"},\"type\": \"Opaque\",\"stringData\": {\"phd-mongodb-user-password\": \"$PASSWORD\"}}" \
+            "https://kubernetes.default.svc/api/v1/namespaces/$NAMESPACE/secrets")
+
+          if echo "$K8S_RESPONSE" | grep -q "\"kind\": \"Secret\""; then
+            echo "MongoDB user password saved to kubernetes secret \"phd-mongodb-user-password\" in namespace $NAMESPACE"
+          else
+            echo "Failed to save MongoDB user password in secret"
+            echo "⚠ Note: The MongoDB user password in config may differ."
           fi
 
           echo ""
@@ -273,10 +294,12 @@ spec:
           #!/bin/bash
           set -euo pipefail
 
+          NAMESPACE="{{workflow.parameters.namespace}}"
           USERNAME="{{workflow.parameters.username}}"
           PASSWORD="{{workflow.parameters.password}}"
           DATABASE_NAME="{{workflow.parameters.database-name}}"
           PROJECT_ID="{{workflow.parameters.atlas-project-id}}"
+          K8s_API_BEARER_TOKEN="{{workflow.parameters.k8s-api-bearer-token}}"
 
           # Install Atlas CLI from official MongoDB package
           echo "Installing MongoDB Atlas CLI..."
@@ -316,6 +339,22 @@ spec:
               echo "✗ Failed to create/update user $USERNAME"
               exit 1
             fi
+          fi
+
+          echo "Saving MongoDB Atlas user password to kubernetes secret"
+
+          K8S_RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: $K8s_API_BEARER_TOKEN" \
+            --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+            -d "{\"apiVersion\": \"v1\",\"kind\": \"Secret\",\"metadata\": {\"name\": \"phd-mongodb-user-password\",\"namespace\": \"$NAMESPACE\"},\"type\": \"Opaque\",\"stringData\": {\"phd-mongodb-user-password\": \"$PASSWORD\"}}" \
+            "https://kubernetes.default.svc/api/v1/namespaces/$NAMESPACE/secrets")
+
+          if echo "$K8S_RESPONSE" | grep -q "\"kind\": \"Secret\""; then
+            echo "MongoDB Atlas user password saved to kubernetes secret \"phd-mongodb-user-password\" in namespace $NAMESPACE"
+          else
+            echo "Failed to save MongoDB Atlas user password in secret"
+            echo "⚠ Note: The MongoDB Atlas user password in config may differ."
           fi
 
           echo ""
