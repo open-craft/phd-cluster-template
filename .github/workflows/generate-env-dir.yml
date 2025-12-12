@@ -28,6 +28,10 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      IMAGE_OVERRIDES:
+        description: "Newline-separated list of image overrides in format 'service=image_name:image_tag' (e.g. 'openedx=repo/name:tag')"
+        required: false
+        type: string
     secrets:
       SSH_PRIVATE_KEY:
         description: "Private SSH key for accessing private repositories"
@@ -91,6 +95,49 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           pip install -r picasso/requirements/base.txt
+
+      - name: Checkout workflow scripts
+        uses: actions/checkout@v4
+        with:
+          repository: open-craft/phd-cluster-template
+          ref: main
+          path: workflow-scripts
+
+      - name: Install PyYAML for update script
+        run: pip install pyyaml
+
+      - name: Apply image overrides to config.yml
+        if: inputs.IMAGE_OVERRIDES != ''
+        working-directory: ${{ github.workspace }}
+        env:
+          CONFIG_FILE: strains/instances/${{ inputs.INSTANCE_NAME }}/config.yml
+          SCRIPT_PATH: workflow-scripts/.github/workflows/scripts/update_config_image.py
+          IMAGE_OVERRIDES: ${{ inputs.IMAGE_OVERRIDES }}
+        run: |
+          set -euo pipefail
+
+          # Parse IMAGE_OVERRIDES (format: service=image_name:image_tag per line)
+          echo "$IMAGE_OVERRIDES" | while IFS= read -r line; do
+            if [ -z "$line" ]; then
+              continue
+            fi
+
+            # Split on '=' to get service and image_spec
+            service="${line%%=*}"
+            image_spec="${line#*=}"
+
+            # Split image_spec on last ':' to get image_name and image_tag
+            # This handles registry ports (e.g., registry:5000/repo/image:tag)
+            image_name="${image_spec%:*}"
+            image_tag="${image_spec##*:}"
+
+            # Update config.yml for this service
+            python "$SCRIPT_PATH" \
+              --config-file "$CONFIG_FILE" \
+              --service "$service" \
+              --image-name "$image_name" \
+              --image-tag "$image_tag"
+          done
 
       - name: Get Tutor Configurations from config.yml and set them as an environment variable
         working-directory: ${{ github.workspace }}
