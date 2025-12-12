@@ -79,6 +79,7 @@ jobs:
       PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
       PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+      IMAGE_OVERRIDES: ${{ inputs.SERVICE }}=${{ needs.build.outputs.image_name }}:${{ needs.build.outputs.image_tag }}
 
   commit-and-push:
     needs:
