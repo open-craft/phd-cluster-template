@@ -314,22 +314,19 @@ No kubeconfig available. Please ensure one of the following:
 
 ### User Roles
 
-The system supports three user roles with different permission levels:
+The system supports three user roles with different permission levels for ArgoCD:
 
 #### Admin Role
 - **ArgoCD**: Full access to all applications and projects
-- **Argo Workflows**: Full cluster-wide access to all workflow resources
-- **Permissions**: Create, read, update, delete all workflows, templates, and cron workflows
+- **Permissions**: Create, read, update, delete all applications and projects
 
 #### Developer Role
 - **ArgoCD**: Access to assigned applications and projects
-- **Argo Workflows**: Full cluster-wide access to workflow resources
-- **Permissions**: Create, read, update, delete workflows, templates, and cron workflows
+- **Permissions**: Create, read, update, delete assigned applications and projects
 
 #### Readonly Role
 - **ArgoCD**: Read-only access to applications and projects
-- **Argo Workflows**: Read-only access to workflow resources
-- **Permissions**: View workflows, templates, and cron workflows only
+- **Permissions**: View applications and projects only
 
 ### Updating User Permissions
 
@@ -345,18 +342,6 @@ phd_update_argo_user_permissions username developer
 # Update user to readonly role
 phd_update_argo_user_permissions username readonly
 ```
-
-### RBAC Manifest Files
-
-User roles are defined in separate YAML manifest files in the `manifests/` directory:
-
-- `argo-user-admin-role.yml`: Admin role and cluster role definitions
-- `argo-user-developer-role.yml`: Developer role and cluster role definitions
-- `argo-user-readonly-role.yml`: Readonly role and cluster role definitions
-- `argo-user-bindings.yml`: Role and cluster role bindings
-- `argo-user-token-secret.yml`: Service account token secret
-
-These manifests use template variables (`{{PHD_ARGO_USERNAME}}`, `{{PHD_ARGO_ROLE}}`) and are applied using the `__phd_kubectl_apply_from_url` function, following the established pattern for remote manifest management.
 
 ### Workflow Manifest Files
 

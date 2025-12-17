@@ -100,13 +100,9 @@ def install_argo_workflows(cluster_config: ClusterConfig) -> None:
         ConfigurationError: If required configuration is missing
         KubernetesError: If Kubernetes operations fail
         ManifestError: If manifest operations fail
-        PasswordError: If password operations fail
     """
 
     k8s = KubernetesClient()
-
-    generated_password = not cluster_config.argo_admin_password
-    plaintext_password = resolve_plaintext_password(cluster_config.argo_admin_password)
 
     run_command_with_logging(
         logger,
@@ -125,29 +121,6 @@ def install_argo_workflows(cluster_config: ClusterConfig) -> None:
 
     run_command_with_logging(
         logger,
-        "configure Argo Workflows ingress",
-        k8s.apply_manifest_from_url,
-        f"{cluster_config.opencraft_manifests_url}/argo-workflows-ingress.yml",
-        "argo",
-        {
-            "PHD_CLUSTER_DOMAIN": cluster_config.cluster_domain,
-        },
-    )
-
-    run_command_with_logging(
-        logger,
-        "configure Argo Server admin auth",
-        k8s.apply_manifest_from_url,
-        f"{cluster_config.opencraft_manifests_url}/argo-server-auth.yml",
-        "argo",
-        {
-            "PHD_CLUSTER_DOMAIN": cluster_config.cluster_domain,
-            "PHD_ARGO_ADMIN_PASSWORD_BCRYPT": bcrypt_password(plaintext_password),
-        },
-    )
-
-    run_command_with_logging(
-        logger,
         "create workflow-executor token in argo namespace",
         k8s.apply_manifest,
         """apiVersion: v1
@@ -162,11 +135,6 @@ type: kubernetes.io/service-account-token""",
     )
 
     _install_argo_workflows_templates(cluster_config)
-
-    if generated_password:
-        logger.warning(
-            "Generated Argo admin password (store securely): %s", plaintext_password
-        )
 
     log_success(logger, "Argo Workflows installed successfully")
 
@@ -211,6 +179,14 @@ def install_argocd(cluster_config: ClusterConfig) -> None:
         "ensure base ArgoCD configmap",
         k8s.apply_manifest_from_url,
         f"{cluster_config.opencraft_manifests_url}/argocd-base-config.yml",
+        "argocd",
+    )
+
+    run_command_with_logging(
+        logger,
+        "configure ArgoCD RBAC roles",
+        k8s.apply_manifest_from_url,
+        f"{cluster_config.opencraft_manifests_url}/argocd-rbac-config.yml",
         "argocd",
     )
 
