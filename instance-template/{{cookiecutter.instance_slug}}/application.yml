@@ -15,13 +15,12 @@ spec:
     path: "instances/{{cookiecutter.instance_slug}}/env"
     repoURL: "{{cookiecutter.cluster_repository}}"
     targetRevision: "{{cookiecutter.cluster_repository_branch}}"
-    directory:
-      recurse: true
   destination:
     server: https://kubernetes.default.svc
     namespace: "{{cookiecutter.instance_slug}}"
   syncPolicy:
     automated:
+      enabled: false
       prune: true
       selfHeal: true
     syncOptions:
