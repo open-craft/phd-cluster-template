@@ -57,6 +57,19 @@ class ClusterConfig(PHDBaseSettings):
         default="instances", description="Directory where instances are stored"
     )
 
+    # Docker registry (for pulling private images)
+    docker_registry: str = Field(
+        default="ghcr.io",
+        description="Docker registry hostname (e.g., ghcr.io)",
+    )
+    docker_registry_credentials: str = Field(
+        default="",
+        description=(
+            "Base64-encoded '<username>:<token>' auth for Docker registry "
+            "(used to create imagePullSecrets)"
+        ),
+    )
+
     # Admin password configuration (optional - will be generated if not provided)
     argo_admin_password: str = Field(
         default="", description="Argo admin password (plaintext)"

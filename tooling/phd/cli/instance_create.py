@@ -44,6 +44,26 @@ DEFAULT_TEMPLATE_VERSION = None
 PHD_MONGODB_USER_PASSWORD_SECRET = "phd-mongodb-user-password"
 
 
+def _configure_instance_registry_pull_secrets(
+    k8s_client: KubernetesClient, instance_name: str
+) -> None:
+    """
+    Ensure the instance namespace can pull private images (cluster-wide registry credentials).
+    """
+    config = get_config()
+    auth = (
+        config.cluster.docker_registry_credentials or ""
+    ).strip()  # pylint: disable=no-member
+    if not auth:
+        return
+
+    k8s_client.ensure_namespace_registry_credentials(
+        namespace=instance_name,
+        registry=config.cluster.docker_registry,  # pylint: disable=no-member
+        auth=auth,
+    )
+
+
 def _ensure_argo_workflows_installed() -> None:
     """
     Ensure Argo Workflows is installed before creating workflows.
@@ -489,6 +509,15 @@ def create_instance(  # pylint: disable=too-many-positional-arguments
     manifests_url = config.cluster.opencraft_manifests_url  # pylint: disable=no-member
 
     _setup_instance_rbac(k8s_client, instance_name, manifests_url)
+
+    run_command_with_logging(
+        logger,
+        f"configure docker registry pull credentials for namespace '{instance_name}'",
+        _configure_instance_registry_pull_secrets,
+        k8s_client,
+        instance_name,
+    )
+
     _ensure_argo_workflows_installed()
 
     config_file = instances_dir / instance_name / "config.yml"

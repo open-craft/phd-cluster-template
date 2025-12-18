@@ -15,11 +15,70 @@ from phd.exceptions import (
     PasswordError,
 )
 from phd.kubeconfig import setup_kubeconfig
-from phd.kubernetes import KubernetesClient
+from phd.kubernetes import DEFAULT_DOCKER_PULL_SECRET_NAME, KubernetesClient
 from phd.password import bcrypt_password, get_password_mtime, resolve_plaintext_password
 from phd.utils import get_logger, log_success
 
 logger = get_logger(__name__)
+
+SYSTEM_NAMESPACES = {
+    "kube-system",
+    "kube-public",
+    "kube-node-lease",
+}
+
+
+def _is_system_namespace(namespace: str) -> bool:
+    return namespace in SYSTEM_NAMESPACES or namespace.startswith("kube-")
+
+
+def _configure_registry_pull_secrets(
+    k8s: KubernetesClient,
+    cluster_config: ClusterConfig,
+    namespaces: list[str],
+    *,
+    scan_existing_namespaces: bool = False,
+    secret_name: str = DEFAULT_DOCKER_PULL_SECRET_NAME,
+) -> None:
+    """
+    Configure image pull credentials for one or more namespaces, and optionally best-effort for all.
+    """
+    auth = (cluster_config.docker_registry_credentials or "").strip()
+    if not auth:
+        logger.info(
+            "PHD_DOCKER_REGISTRY_CREDENTIALS not set; skipping cluster-wide registry credentials"
+        )
+        return
+
+    registry = cluster_config.docker_registry
+
+    for ns in namespaces:
+        k8s.ensure_namespace_registry_credentials(
+            namespace=ns,
+            registry=registry,
+            auth=auth,
+            secret_name=secret_name,
+        )
+
+    if not scan_existing_namespaces:
+        return
+
+    # Best-effort: configure credentials for all existing non-system namespaces.
+    # This covers instances created before this feature existed.
+    for ns in k8s.list_namespaces():
+        if ns in namespaces or _is_system_namespace(ns):
+            continue
+        try:
+            k8s.ensure_namespace_registry_credentials(
+                namespace=ns,
+                registry=registry,
+                auth=auth,
+                secret_name=secret_name,
+            )
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.warning(
+                "Failed to configure registry pull secret in namespace '%s': %s", ns, e
+            )
 
 
 def _apply_argo_workflows_template(url: str, namespace: str) -> None:
@@ -163,6 +222,16 @@ type: kubernetes.io/service-account-token""",
 
     _install_argo_workflows_templates(cluster_config)
 
+    run_command_with_logging(
+        logger,
+        "configure cluster-wide docker registry pull credentials",
+        _configure_registry_pull_secrets,
+        k8s,
+        cluster_config,
+        ["argo", "default"],
+        scan_existing_namespaces=True,
+    )
+
     if generated_password:
         logger.warning(
             "Generated Argo admin password (store securely): %s", plaintext_password
@@ -236,6 +305,16 @@ def install_argocd(cluster_config: ClusterConfig) -> None:
             "PHD_ARGO_ADMIN_PASSWORD_BCRYPT": bcrypt_password(plaintext_password),
             "PHD_ARGOCD_ADMIN_PASSWORD_MTIME": get_password_mtime(),
         },
+    )
+
+    run_command_with_logging(
+        logger,
+        "configure docker registry pull credentials in argocd namespace",
+        _configure_registry_pull_secrets,
+        k8s,
+        cluster_config,
+        ["argocd"],
+        scan_existing_namespaces=False,
     )
 
     if generated_password:

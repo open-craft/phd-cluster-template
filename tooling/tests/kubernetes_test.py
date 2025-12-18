@@ -10,7 +10,7 @@ import requests
 from kubernetes import client
 
 from phd.exceptions import KubernetesError, ManifestError
-from phd.kubernetes import KubernetesClient
+from phd.kubernetes import KubernetesClient, build_dockerconfigjson
 
 
 class TestKubernetesClient:
@@ -776,6 +776,122 @@ class TestKubernetesClient:
             k8s_client.patch_config_map(
                 name="test-cm", namespace="test-ns", data={"key": "value"}
             )
+
+    def test_build_dockerconfigjson_success(self):
+        dockerconfigjson = build_dockerconfigjson(
+            registry="ghcr.io", auth="Zm9vOmJhcg=="
+        )
+        assert dockerconfigjson == '{"auths":{"ghcr.io":{"auth":"Zm9vOmJhcg=="}}}'
+
+    def test_build_dockerconfigjson_missing_registry_raises(self):
+        with pytest.raises(KubernetesError, match="Docker registry is empty"):
+            build_dockerconfigjson(registry="", auth="Zm9vOmJhcg==")
+
+    def test_build_dockerconfigjson_missing_auth_raises(self):
+        with pytest.raises(
+            KubernetesError, match="Docker registry credentials are empty"
+        ):
+            build_dockerconfigjson(registry="ghcr.io", auth="")
+
+    @mock.patch("phd.kubernetes.client.RbacAuthorizationV1Api")
+    @mock.patch("phd.kubernetes.client.CoreV1Api")
+    @mock.patch("phd.kubernetes.client.AppsV1Api")
+    @mock.patch("phd.kubernetes.client.ApiClient")
+    @mock.patch("phd.kubernetes.config.load_kube_config")
+    @mock.patch("phd.kubernetes.get_logger", return_value=mock.Mock())
+    def test_ensure_service_account_image_pull_secret_patches_when_missing(
+        self,
+        _mock_get_logger,
+        _mock_load_config,
+        _mock_api_client,
+        _mock_apps_v1_class,
+        mock_core_v1_class,
+        _mock_rbac_v1,
+    ):
+        mock_core_v1_instance = mock.Mock()
+        mock_core_v1_class.return_value = mock_core_v1_instance
+
+        sa = mock.Mock()
+        sa.image_pull_secrets = []
+        mock_core_v1_instance.read_namespaced_service_account.return_value = sa
+
+        k8s_client = KubernetesClient()
+        updated = k8s_client.ensure_service_account_image_pull_secret(
+            namespace="test-ns",
+            service_account_name="default",
+            secret_name="phd-docker-registry",
+        )
+
+        assert updated is True
+        mock_core_v1_instance.patch_namespaced_service_account.assert_called_once_with(
+            name="default",
+            namespace="test-ns",
+            body={"imagePullSecrets": [{"name": "phd-docker-registry"}]},
+        )
+
+    @mock.patch("phd.kubernetes.client.RbacAuthorizationV1Api")
+    @mock.patch("phd.kubernetes.client.CoreV1Api")
+    @mock.patch("phd.kubernetes.client.AppsV1Api")
+    @mock.patch("phd.kubernetes.client.ApiClient")
+    @mock.patch("phd.kubernetes.config.load_kube_config")
+    @mock.patch("phd.kubernetes.get_logger", return_value=mock.Mock())
+    def test_ensure_service_account_image_pull_secret_noop_if_already_present(
+        self,
+        _mock_get_logger,
+        _mock_load_config,
+        _mock_api_client,
+        _mock_apps_v1_class,
+        mock_core_v1_class,
+        _mock_rbac_v1,
+    ):
+        mock_core_v1_instance = mock.Mock()
+        mock_core_v1_class.return_value = mock_core_v1_instance
+
+        sa = mock.Mock()
+        sa.image_pull_secrets = [{"name": "phd-docker-registry"}]
+        mock_core_v1_instance.read_namespaced_service_account.return_value = sa
+
+        k8s_client = KubernetesClient()
+        updated = k8s_client.ensure_service_account_image_pull_secret(
+            namespace="test-ns",
+            service_account_name="default",
+            secret_name="phd-docker-registry",
+        )
+
+        assert updated is False
+        mock_core_v1_instance.patch_namespaced_service_account.assert_not_called()
+
+    @mock.patch("phd.kubernetes.client.RbacAuthorizationV1Api")
+    @mock.patch("phd.kubernetes.client.CoreV1Api")
+    @mock.patch("phd.kubernetes.client.AppsV1Api")
+    @mock.patch("phd.kubernetes.client.ApiClient")
+    @mock.patch("phd.kubernetes.config.load_kube_config")
+    @mock.patch("phd.kubernetes.get_logger", return_value=mock.Mock())
+    def test_ensure_service_account_image_pull_secret_returns_false_if_sa_missing(
+        self,
+        _mock_get_logger,
+        _mock_load_config,
+        _mock_api_client,
+        _mock_apps_v1_class,
+        mock_core_v1_class,
+        _mock_rbac_v1,
+    ):
+        mock_core_v1_instance = mock.Mock()
+        mock_core_v1_class.return_value = mock_core_v1_instance
+
+        mock_core_v1_instance.read_namespaced_service_account.side_effect = (
+            client.exceptions.ApiException(status=404, reason="Not Found")
+        )
+
+        k8s_client = KubernetesClient()
+        updated = k8s_client.ensure_service_account_image_pull_secret(
+            namespace="test-ns",
+            service_account_name="missing",
+            secret_name="phd-docker-registry",
+        )
+
+        assert updated is False
+        mock_core_v1_instance.patch_namespaced_service_account.assert_not_called()
 
     @mock.patch("phd.kubernetes.client.RbacAuthorizationV1Api")
     @mock.patch("phd.kubernetes.client.CoreV1Api")
