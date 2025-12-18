@@ -3,8 +3,9 @@ Utility functions to support working with Kubernetes.
 """
 
 import io
+import json
 import subprocess
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Sequence
 
 import requests
 import yaml
@@ -13,6 +14,30 @@ from kubernetes import client, config
 
 from phd.exceptions import KubernetesError, ManifestError
 from phd.utils import get_logger
+
+DEFAULT_DOCKER_PULL_SECRET_NAME = "phd-docker-registry"
+
+
+def build_dockerconfigjson(registry: str, auth: str) -> str:
+    """
+    Build a Docker config JSON payload suitable for kubernetes.io/dockerconfigjson secrets.
+
+    Args:
+        registry: Docker registry hostname (e.g., "ghcr.io")
+        auth: Base64 encoded "<username>:<token>" string (Docker auth field)
+
+    Returns:
+        JSON string to store in `.dockerconfigjson`
+    """
+    registry = (registry or "").strip()
+    if not registry:
+        raise KubernetesError("Docker registry is empty")
+
+    auth = (auth or "").strip()
+    if not auth:
+        raise KubernetesError("Docker registry credentials are empty")
+
+    return json.dumps({"auths": {registry: {"auth": auth}}}, separators=(",", ":"))
 
 
 class KubernetesClient:
@@ -525,3 +550,137 @@ class KubernetesClient:
             raise KubernetesError(
                 f"Failed to delete cluster role binding '{name}': {e}"
             ) from e
+
+    def list_namespaces(self) -> List[str]:
+        """
+        List namespaces in the cluster.
+
+        Returns:
+            List of namespace names
+
+        Raises:
+            KubernetesError: If listing namespaces fails
+        """
+        try:
+            namespaces = self._core_v1.list_namespace()
+            return [item.metadata.name for item in namespaces.items]
+        except Exception as e:
+            raise KubernetesError(f"Failed to list namespaces: {e}") from e
+
+    def ensure_docker_registry_pull_secret(
+        self,
+        namespace: str,
+        registry: str,
+        auth: str,
+        secret_name: str = DEFAULT_DOCKER_PULL_SECRET_NAME,
+    ) -> None:
+        """
+        Ensure a kubernetes.io/dockerconfigjson pull secret exists in a namespace.
+
+        This is applied idempotently via kubectl apply.
+        """
+        dockerconfigjson = build_dockerconfigjson(registry=registry, auth=auth)
+
+        # Use stringData so Kubernetes handles base64 encoding.
+        manifest = f"""apiVersion: v1
+kind: Secret
+metadata:
+  name: {secret_name}
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: '{dockerconfigjson}'
+"""
+        self.apply_manifest(manifest, namespace=namespace)
+
+    def _read_service_account(
+        self, name: str, namespace: str
+    ) -> Optional[client.V1ServiceAccount]:
+        try:
+            return self._core_v1.read_namespaced_service_account(
+                name=name, namespace=namespace
+            )
+        except client.exceptions.ApiException as e:
+            if e.status == 404:
+                return None
+            raise KubernetesError(
+                f"Failed to read service account '{name}' in namespace '{namespace}': {e}"
+            ) from e
+        except Exception as e:
+            raise KubernetesError(
+                f"Failed to read service account '{name}' in namespace '{namespace}': {e}"
+            ) from e
+
+    @staticmethod
+    def _extract_image_pull_secret_names(
+        service_account: client.V1ServiceAccount,
+    ) -> List[str]:
+        names: List[str] = []
+        refs = getattr(service_account, "image_pull_secrets", None) or []
+        for ref in refs:
+            if isinstance(ref, dict):
+                name = ref.get("name")
+            else:
+                name = getattr(ref, "name", None)
+            if name:
+                names.append(name)
+        return names
+
+    def ensure_service_account_image_pull_secret(
+        self,
+        namespace: str,
+        service_account_name: str,
+        secret_name: str = DEFAULT_DOCKER_PULL_SECRET_NAME,
+    ) -> bool:
+        """
+        Ensure a service account references the given imagePullSecret.
+
+        Returns:
+            True if the service account was updated, False if unchanged or missing.
+        """
+        sa = self._read_service_account(name=service_account_name, namespace=namespace)
+        if sa is None:
+            return False
+
+        existing = self._extract_image_pull_secret_names(sa)
+        if secret_name in existing:
+            return False
+
+        updated = existing + [secret_name]
+
+        try:
+            self._core_v1.patch_namespaced_service_account(
+                name=service_account_name,
+                namespace=namespace,
+                body={"imagePullSecrets": [{"name": n} for n in updated]},
+            )
+            return True
+        except Exception as e:
+            raise KubernetesError(
+                f"Failed to patch service account '{service_account_name}' in namespace '{namespace}': {e}"
+            ) from e
+
+    def ensure_namespace_registry_credentials(
+        self,
+        namespace: str,
+        registry: str,
+        auth: str,
+        secret_name: str = DEFAULT_DOCKER_PULL_SECRET_NAME,
+        service_accounts: Sequence[str] = ("default", "workflow-executor"),
+    ) -> None:
+        """
+        Ensure registry credentials are configured for pulling private images in a namespace.
+
+        Creates/updates the pull secret and attaches it to common service accounts.
+        """
+        self.ensure_docker_registry_pull_secret(
+            namespace=namespace,
+            registry=registry,
+            auth=auth,
+            secret_name=secret_name,
+        )
+        for sa_name in service_accounts:
+            self.ensure_service_account_image_pull_secret(
+                namespace=namespace,
+                service_account_name=sa_name,
+                secret_name=secret_name,
+            )
