@@ -35,7 +35,7 @@ on:
 jobs:
   build:
     name: Build '{% raw %}${{ inputs.SERVICE }}{% endraw %}' image
-    uses: open-craft/phd-cluster-template/.github/workflows/build.yml@main
+    uses: open-craft/phd-cluster-template/.github/workflows/build.yml@kaustav/new_ghcr_test
     permissions:
       packages: write
       contents: write
