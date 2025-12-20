@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Update a Tutor instance config.yml with the built image reference.
 

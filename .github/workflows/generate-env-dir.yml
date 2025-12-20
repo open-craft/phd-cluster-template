@@ -45,6 +45,7 @@ jobs:
         shell: bash
     env:
       INSTANCE_PATH: strains/instances/${{ inputs.INSTANCE_NAME }}
+      TUTOR_ROOT: ${{ github.workspace }}/strains/instances/${{ inputs.INSTANCE_NAME }}
 
     steps:
       - name: Setup SSH agent for private repositories cloning
@@ -74,7 +75,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: open-craft/phd-cluster-template
-          ref: main
+          ref: kaustav/new_ghrc_test
           path: workflow-scripts
 
       - name: Setup Python
@@ -85,6 +86,32 @@ jobs:
 
       - name: Install PyYAML for update script
         run: pip install pyyaml
+
+      - name: Extract tutor version from config.yml
+        working-directory: ${{ github.workspace }}
+        env:
+          CONFIG_FILE: ${{ env.INSTANCE_PATH }}/config.yml
+        run: |
+          set -euo pipefail
+          python workflow-scripts/.github/workflows/scripts/extract_tutor_version.py \
+            --config-file "$CONFIG_FILE"
+
+      - name: Install tutor and tutor-contrib-picasso
+        run: |
+          set -euo pipefail
+          pip install "tutor==${TUTOR_VERSION}"
+          pip install "git+https://github.com/eduNEXT/tutor-contrib-picasso@${{ inputs.PICASSO_VERSION }}"
+
+      - name: Generate env directory with Picasso commands
+        working-directory: ${{ github.workspace }}
+        env:
+          CONFIG_FILE: ${{ env.INSTANCE_PATH }}/config.yml
+          TUTOR_ROOT: ${{ env.TUTOR_ROOT }}
+        run: |
+          set -euo pipefail
+          python workflow-scripts/.github/workflows/scripts/generate_env_dir.py \
+            --config-file "$CONFIG_FILE" \
+            --tutor-root "$TUTOR_ROOT"
 
       - name: Apply image overrides to config.yml and env directory
         if: inputs.IMAGE_OVERRIDES != ''
