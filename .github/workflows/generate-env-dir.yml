@@ -44,24 +44,9 @@ jobs:
       run:
         shell: bash
     env:
-      TUTOR_ROOT: ${{ github.workspace }}/strains/instances/${{ inputs.INSTANCE_NAME }}
-      TUTOR_PLUGINS_ROOT: ${{ github.workspace }}/strains/instances/${{ inputs.INSTANCE_NAME }}/plugins
+      INSTANCE_PATH: strains/instances/${{ inputs.INSTANCE_NAME }}
 
     steps:
-      - name: Checkout Picasso repository for utility scripts
-        uses: actions/checkout@v4
-        with:
-          repository: open-craft/picasso
-          ref: ${{ inputs.PICASSO_VERSION }}
-          path: picasso
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-          cache: 'pip'
-          cache-dependency-path: picasso/requirements/base.txt
-
       - name: Setup SSH agent for private repositories cloning
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -76,12 +61,6 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Install PHD CLI
-        run: uv tool install git+https://github.com/open-craft/phd-cluster-template.git@${{ inputs.PHD_CLI_VERSION }}#subdirectory=tooling
-
       - name: Checkout cluster repository for build configurations
         uses: actions/checkout@v4
         with:
@@ -91,11 +70,6 @@ jobs:
           ssh-key: ${{ inputs.STRAIN_REPOSITORY != github.repository && secrets.SSH_PRIVATE_KEY || '' }}
           path: strains
 
-      - name: Install necessary requirements for workflow scripts
-        working-directory: ${{ github.workspace }}
-        run: |
-          pip install -r picasso/requirements/base.txt
-
       - name: Checkout workflow scripts
         uses: actions/checkout@v4
         with:
@@ -103,69 +77,29 @@ jobs:
           ref: main
           path: workflow-scripts
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: 'pip'
+
       - name: Install PyYAML for update script
         run: pip install pyyaml
 
-      - name: Apply image overrides to config.yml
+      - name: Apply image overrides to config.yml and env directory
         if: inputs.IMAGE_OVERRIDES != ''
         working-directory: ${{ github.workspace }}
         env:
-          CONFIG_FILE: strains/instances/${{ inputs.INSTANCE_NAME }}/config.yml
-          SCRIPT_PATH: workflow-scripts/.github/workflows/scripts/update_config_image.py
           IMAGE_OVERRIDES: ${{ inputs.IMAGE_OVERRIDES }}
         run: |
           set -euo pipefail
-
-          # Parse IMAGE_OVERRIDES (format: service=image_name:image_tag per line)
-          echo "$IMAGE_OVERRIDES" | while IFS= read -r line; do
-            if [ -z "$line" ]; then
-              continue
-            fi
-
-            # Split on '=' to get service and image_spec
-            service="${line%%=*}"
-            image_spec="${line#*=}"
-
-            # Split image_spec on last ':' to get image_name and image_tag
-            # This handles registry ports (e.g., registry:5000/repo/image:tag)
-            image_name="${image_spec%:*}"
-            image_tag="${image_spec##*:}"
-
-            # Update config.yml for this service
-            python "$SCRIPT_PATH" \
-              --config-file "$CONFIG_FILE" \
-              --service "$service" \
-              --image-name "$image_name" \
-              --image-tag "$image_tag"
-          done
-
-      - name: Get Tutor Configurations from config.yml and set them as an environment variable
-        working-directory: ${{ github.workspace }}
-        env:
-          REQUIRED_KEYS: TUTOR_VERSION
-          OPTIONAL_KEYS: DOCKER_REGISTRY
-          CONFIG_FILE: strains/instances/${{ inputs.INSTANCE_NAME }}/config.yml
-          SCRIPT_PATH: picasso/.github/workflows/scripts/get_tutor_config.py
-        run: |
-          OPT_ARGS=""
-          if [ -n "${OPTIONAL_KEYS}" ]; then
-            OPT_ARGS="--optional-keys ${OPTIONAL_KEYS}"
-          fi
-          ENV_VARS=$(python "$SCRIPT_PATH" --config-file "$CONFIG_FILE" --required-keys $REQUIRED_KEYS $OPT_ARGS)
-          echo "$ENV_VARS" >> "$GITHUB_ENV"
-
-      - name: Install Tutor and its dependencies from the version specified in the config.yml
-        run: |
-          pip install git+https://github.com/overhangio/tutor.git@$TUTOR_VERSION
-          tutor config save
-
-      - name: Enable and install picasso plugin in Tutor environment
-        run: |
-          pip install git+https://github.com/open-craft/tutor-contrib-picasso@kaustav/fix_tutor_main_compatibility
-          tutor plugins enable picasso
+          python workflow-scripts/.github/workflows/scripts/apply_image_overrides.py \
+            --config-file "${INSTANCE_PATH}/config.yml" \
+            --env-dir "${INSTANCE_PATH}/env" \
+            --image-overrides "${IMAGE_OVERRIDES}"
 
       - name: Upload env folder as artifact
         uses: actions/upload-artifact@v4
         with:
           name: tutor-env-${{ inputs.INSTANCE_NAME }}
-          path: ${{ github.workspace }}/strains/instances/${{ inputs.INSTANCE_NAME }}/env
+          path: ${{ github.workspace }}/${{ env.INSTANCE_PATH }}/env
