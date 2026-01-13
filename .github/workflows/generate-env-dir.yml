@@ -99,7 +99,7 @@ jobs:
       - name: Install tutor and tutor-contrib-picasso
         run: |
           set -euo pipefail
-          pip install "tutor==${TUTOR_VERSION}"
+          pip install "git+https://github.com/overhangio/tutor.git@$TUTOR_VERSION"
           pip install "git+https://github.com/eduNEXT/tutor-contrib-picasso@${{ inputs.PICASSO_VERSION }}"
 
       - name: Generate env directory with Picasso commands
