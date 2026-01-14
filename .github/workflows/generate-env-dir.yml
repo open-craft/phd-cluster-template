@@ -100,7 +100,15 @@ jobs:
         run: |
           set -euo pipefail
           pip install "git+https://github.com/overhangio/tutor.git@$TUTOR_VERSION"
-          pip install "git+https://github.com/eduNEXT/tutor-contrib-picasso@${{ inputs.PICASSO_VERSION }}"
+          pip install "git+https://github.com/open-craft/tutor-contrib-picasso@${{ inputs.PICASSO_VERSION }}"
+
+      - name: Enable picasso plugin
+        working-directory: ${{ github.workspace }}
+        env:
+          TUTOR_ROOT: ${{ env.TUTOR_ROOT }}
+        run: |
+          set -euo pipefail
+          tutor plugins enable picasso
 
       - name: Generate env directory with Picasso commands
         working-directory: ${{ github.workspace }}
