@@ -15,10 +15,6 @@ on:
         description: "Branch to clone the strain from"
         required: true
         type: string
-      PICASSO_VERSION:
-        description: "Picasso version"
-        required: true
-        type: string
       PHD_CLI_VERSION:
         description: "PHD cluster template version"
         required: true
@@ -100,7 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           pip install "git+https://github.com/overhangio/tutor.git@$TUTOR_VERSION"
-          pip install "git+https://github.com/open-craft/tutor-contrib-picasso@${{ inputs.PICASSO_VERSION }}"
+          pip install "git+https://github.com/open-craft/tutor-contrib-picasso@main"
 
       - name: Enable picasso plugin
         working-directory: ${{ github.workspace }}
