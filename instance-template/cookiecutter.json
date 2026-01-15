@@ -5,7 +5,7 @@
   "environment": "{{ env('PHD_ENVIRONMENT') or 'production' }}",
   "platform_description": "Open edX Instance for {{ cookiecutter.instance_name }}",
   "platform_repository": "https://github.com/openedx/edx-platform.git",
-  "platform_version": "release/teak",
+  "platform_version": "release/teak.3",
   "tutor_version": "v20.0.5",
   "cluster_repository": "",
   "cluster_repository_branch": "main",

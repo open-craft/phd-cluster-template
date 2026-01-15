@@ -77,7 +77,7 @@ Creates a new Open edX instance with all required resources.
 ```bash
 phd_create_instance my-instance \
   --platform-name "My Learning Platform" \
-  --edx-platform-version "release/teak" \
+  --edx-platform-version "release/teak.3" \
   --tutor-version "v20.0.1"
 ```
 
