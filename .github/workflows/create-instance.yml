@@ -166,6 +166,8 @@ jobs:
           PHD_STORAGE_REGION: ${{ secrets.PHD_STORAGE_REGION }}
           PHD_STORAGE_ACCESS_KEY_ID: ${{ secrets.PHD_STORAGE_ACCESS_KEY_ID }}
           PHD_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.PHD_STORAGE_SECRET_ACCESS_KEY }}
+          # OpenCraft manifests version override
+          PHD_OPENCRAFT_MANIFESTS_VERSION: ${{ inputs.INSTANCE_TEMPLATE_VERSION }}
           # Backend credentials for Terraform state access
           AWS_ACCESS_KEY_ID: ${{ secrets.PHD_STORAGE_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PHD_STORAGE_SECRET_ACCESS_KEY }}

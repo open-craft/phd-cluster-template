@@ -11,6 +11,11 @@ on:
         description: "PHD CLI version"
         default: "{{ cookiecutter.phd_cluster_template_version }}"
         type: string
+      PHD_OPENCRAFT_MANIFESTS_VERSION:
+        description: "Git ref (branch/tag/SHA) to use for applying OpenCraft manifests"
+        required: false
+        default: "main"
+        type: string
       RUNNER_WORKFLOW_LABEL:
         description: 'The label of the runner workflow to run'
         required: false
@@ -42,4 +47,5 @@ jobs:
     with:
       INSTANCE_NAME: "{% raw %}${{ inputs.INSTANCE_NAME }}{% endraw %}"
       PHD_CLI_VERSION: "{% raw %}${{ inputs.PHD_CLI_VERSION }}{% endraw %}"
+      PHD_OPENCRAFT_MANIFESTS_VERSION: "{% raw %}${{ inputs.PHD_OPENCRAFT_MANIFESTS_VERSION }}{% endraw %}"
       RUNNER_WORKFLOW_LABEL: "{% raw %}${{ inputs.RUNNER_WORKFLOW_LABEL }}{% endraw %}"
