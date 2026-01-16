@@ -35,189 +35,22 @@ on:
         required: true
 
 jobs:
-  build-openedx:
-    name: Build 'openedx' image
-    uses: open-craft/phd-cluster-template/.github/workflows/build-service.yml@kaustav/new_ghrc_test
+  build:
+    name: Build ${{ matrix.service }} service
+    uses: open-craft/phd-cluster-template/.github/workflows/build.yml@gabor/experiment
+    strategy:
+      matrix:
+        service: ["openedx", "mfe"]
     permissions:
       packages: write
       contents: read
-    concurrency:
-      group: build-service:${{ inputs.STRAIN_REPOSITORY }}:${{ inputs.STRAIN_REPOSITORY_BRANCH }}:${{ inputs.INSTANCE_NAME }}:openedx
-      cancel-in-progress: false
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     with:
       INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
-      SERVICE: openedx
+      SERVICE: ${{ matrix.service }}
       STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
       STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
       PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
-      RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
-
-  build-mfe:
-    name: Build 'mfe' image
-    uses: open-craft/phd-cluster-template/.github/workflows/build-service.yml@kaustav/new_ghrc_test
-    permissions:
-      packages: write
-      contents: read
-    concurrency:
-      group: build-service:${{ inputs.STRAIN_REPOSITORY }}:${{ inputs.STRAIN_REPOSITORY_BRANCH }}:${{ inputs.INSTANCE_NAME }}:mfe
-      cancel-in-progress: false
-    secrets:
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-    with:
-      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
-      SERVICE: mfe
-      STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
-      STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
-      PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
-      RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
-
-  generate-env-dir:
-    needs:
-      - build-openedx
-      - build-mfe
-    name: Generate Environment Directory
-    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@kaustav/new_ghrc_test
-    secrets:
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-    with:
-      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
-      STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
-      STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
       PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
-      IMAGE_OVERRIDES: |
-        openedx=${{ needs.build-openedx.outputs.image_name }}:${{ needs.build-openedx.outputs.image_tag }}
-        mfe=${{ needs.build-mfe.outputs.image_name }}:${{ needs.build-mfe.outputs.image_tag }}
-
-  commit-and-push:
-    needs:
-      - build-openedx
-      - build-mfe
-      - generate-env-dir
-    runs-on: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
-    concurrency:
-      group: ${{ inputs.STRAIN_REPOSITORY }}:${{ inputs.STRAIN_REPOSITORY_BRANCH }}:${{ inputs.INSTANCE_NAME }}:batch-build
-      cancel-in-progress: false
-    steps:
-      - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add GitHub to known hosts
-        run: ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-      - name: Checkout cluster repository
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ inputs.STRAIN_REPOSITORY }}
-          ref: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
-          fetch-depth: 0
-          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Configure git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-
-      - name: Checkout workflow scripts
-        uses: actions/checkout@v4
-        with:
-          repository: open-craft/phd-cluster-template
-          ref: main
-          path: workflow-scripts
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-          cache: 'pip'
-
-      - name: Install PyYAML
-        run: pip install pyyaml
-
-      - name: Prepare env directory
-        run: |
-          set -euo pipefail
-          rm -rf "instances/${{ inputs.INSTANCE_NAME }}/env"
-          mkdir -p "instances/${{ inputs.INSTANCE_NAME }}/env"
-
-      - name: Download env artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tutor-env-${{ inputs.INSTANCE_NAME }}
-          path: instances/${{ inputs.INSTANCE_NAME }}/env
-
-      - name: Update config.yml with all service image tags
-        env:
-          CONFIG_FILE: instances/${{ inputs.INSTANCE_NAME }}/config.yml
-          SCRIPT_PATH: workflow-scripts/.github/workflows/scripts/update_config_image.py
-          OPENEDX_IMAGE_NAME: ${{ needs.build-openedx.outputs.image_name }}
-          OPENEDX_IMAGE_TAG: ${{ needs.build-openedx.outputs.image_tag }}
-          MFE_IMAGE_NAME: ${{ needs.build-mfe.outputs.image_name }}
-          MFE_IMAGE_TAG: ${{ needs.build-mfe.outputs.image_tag }}
-        run: |
-          # Update config.yml for openedx service
-          python "$SCRIPT_PATH" \
-            --config-file "$CONFIG_FILE" \
-            --service "openedx" \
-            --image-name "$OPENEDX_IMAGE_NAME" \
-            --image-tag "$OPENEDX_IMAGE_TAG"
-
-          # Update config.yml for mfe service
-          python "$SCRIPT_PATH" \
-            --config-file "$CONFIG_FILE" \
-            --service "mfe" \
-            --image-name "$MFE_IMAGE_NAME" \
-            --image-tag "$MFE_IMAGE_TAG"
-
-      - name: Commit and push changes
-        env:
-          INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
-          BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
-          SCRIPT_PATH: workflow-scripts/.github/workflows/scripts/update_config_image.py
-          CONFIG_FILE: instances/${{ inputs.INSTANCE_NAME }}/config.yml
-          OPENEDX_IMAGE_NAME: ${{ needs.build-openedx.outputs.image_name }}
-          OPENEDX_IMAGE_TAG: ${{ needs.build-openedx.outputs.image_tag }}
-          MFE_IMAGE_NAME: ${{ needs.build-mfe.outputs.image_name }}
-          MFE_IMAGE_TAG: ${{ needs.build-mfe.outputs.image_tag }}
-        run: |
-          set -euo pipefail
-
-          git add -A instances/$INSTANCE_NAME
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          git commit -m "chore: update openedx, mfe images and tutor config for $INSTANCE_NAME"
-
-          for i in 1 2 3; do
-            if git push; then
-              exit 0
-            fi
-            sleep $((i*i))
-            git pull origin "$BRANCH" --rebase
-            # Re-apply all config updates on top of latest base in case of rebase changes
-            python "$SCRIPT_PATH" \
-              --config-file "$CONFIG_FILE" \
-              --service "openedx" \
-              --image-name "$OPENEDX_IMAGE_NAME" \
-              --image-tag "$OPENEDX_IMAGE_TAG"
-            python "$SCRIPT_PATH" \
-              --config-file "$CONFIG_FILE" \
-              --service "mfe" \
-              --image-name "$MFE_IMAGE_NAME" \
-              --image-tag "$MFE_IMAGE_TAG"
-            git add instances/$INSTANCE_NAME/config.yml
-            git add instances/$INSTANCE_NAME/env
-            if git diff --cached --quiet; then
-              echo "No additional changes after rebase"
-            else
-              git commit -m "chore: update openedx, mfe images and tutor config for $INSTANCE_NAME (retry $i)" || true
-            fi
-          done
-          exit 1
