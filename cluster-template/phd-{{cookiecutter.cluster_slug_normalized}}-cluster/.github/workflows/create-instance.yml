@@ -15,6 +15,10 @@ on:
         description: "Repository containing the instance template"
         default: "https://github.com/open-craft/phd-cluster-template.git"
         type: string
+      INSTANCE_TEMPLATE_VERSION:
+        description: "Version of the instance template to use"
+        default: "main"
+        type: string
       EDX_PLATFORM_REPOSITORY:
         description: "Repository to clone the edx-platform from"
         default: "https://github.com/openedx/edx-platform.git"
@@ -66,6 +70,7 @@ jobs:
       INSTANCE_NAME: "{% raw %}${{ inputs.INSTANCE_NAME }}{% endraw %}"
       PLATFORM_NAME: "{% raw %}${{ inputs.PLATFORM_NAME }}{% endraw %}"
       INSTANCE_TEMPLATE_REPOSITORY: "{% raw %}${{ inputs.INSTANCE_TEMPLATE_REPOSITORY }}{% endraw %}"
+      INSTANCE_TEMPLATE_VERSION: "{% raw %}${{ inputs.INSTANCE_TEMPLATE_VERSION }}{% endraw %}"
       EDX_PLATFORM_REPOSITORY: "{% raw %}${{ inputs.EDX_PLATFORM_REPOSITORY }}{% endraw %}"
       EDX_PLATFORM_VERSION: "{% raw %}${{ inputs.EDX_PLATFORM_VERSION }}{% endraw %}"
       TUTOR_VERSION: "{% raw %}${{ inputs.TUTOR_VERSION }}{% endraw %}"

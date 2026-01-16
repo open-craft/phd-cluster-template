@@ -41,9 +41,6 @@ jobs:
     strategy:
       matrix:
         service: ["openedx", "mfe"]
-    permissions:
-      packages: write
-      contents: read
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     with:

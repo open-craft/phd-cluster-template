@@ -53,7 +53,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       packages: write
-      contents: read
+      contents: write
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     with:
