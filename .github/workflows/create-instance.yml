@@ -12,6 +12,11 @@ on:
         required: false
         default: "https://github.com/open-craft/phd-cluster-template.git"
         type: string
+      INSTANCE_TEMPLATE_VERSION:
+        description: "Version of the instance template to use"
+        required: false
+        default: "main"
+        type: string
       PLATFORM_NAME:
         description: 'Platform name (e.g., "My Open edX Platform")'
         required: true
@@ -168,6 +173,7 @@ jobs:
           phd_create_instance \
             "${{ inputs.INSTANCE_NAME }}" \
             --template-repository "${{ inputs.INSTANCE_TEMPLATE_REPOSITORY }}" \
+            --template-version "${{ inputs.INSTANCE_TEMPLATE_VERSION }}" \
             --platform-name "${{ inputs.PLATFORM_NAME }}" \
             --edx-platform-repository "${{ inputs.EDX_PLATFORM_REPOSITORY }}" \
             --edx-platform-version "${{ inputs.EDX_PLATFORM_VERSION }}" \
