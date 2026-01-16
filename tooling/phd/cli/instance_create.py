@@ -125,7 +125,7 @@ def _generate_instance_config(  # pylint: disable=too-many-positional-arguments,
 
     # Detect cluster repository information from the current git repo
     cluster_repo_url = get_git_repo_url()
-    cluster_repo_branch = get_git_repo_branch()
+    cluster_repo_branch = template_version or get_git_repo_branch()
     cluster_repo_owner = parse_repo_owner(cluster_repo_url)
     cluster_repo_name = parse_repo_name(cluster_repo_url)
 
