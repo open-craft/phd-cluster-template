@@ -460,8 +460,9 @@ class TestBuildInstanceConfigMongoDB:
 
         result = build_instance_config("inst", config)
 
+        assert result["PHD_INSTANCE_MONGODB_DATABASE"] == "testdb"
         assert result["PHD_INSTANCE_MONGODB_HOST"] == ""
         assert result["PHD_INSTANCE_MONGODB_PORT"] == ""
         assert result["PHD_INSTANCE_MONGODB_AUTH_SOURCE"] == ""
         assert result["PHD_INSTANCE_MONGODB_REPLICA_SET"] == ""
-        assert result["PHD_INSTANCE_MONGODB_DATABASE_FORUM"] == "phd-inst-forum"
+        assert result["PHD_INSTANCE_MONGODB_DATABASE_FORUM"] == ""

@@ -40,21 +40,21 @@ RUN_MYSQL: false
 MYSQL_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
 MYSQL_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
 MYSQL_PASSWORD: "{{ generate_password() }}"
-MYSQL_HOST: "{{ env('PHD_MYSQL_HOST') or 'mysql' }}"
-MYSQL_PORT: "{{ env('PHD_MYSQL_PORT') or '3306' }}"
+MYSQL_HOST: "{{ env('PHD_MYSQL_HOST', 'mysql') }}"
+MYSQL_PORT: "{{ env('PHD_MYSQL_PORT', '3306') }}"
 
 # MongoDB configuration
 RUN_MONGODB: false
-MONGODB_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
+MONGODB_DATABASE: "{{ env('PHD_MONGODB_DATABASE', 'phd-{{ cookiecutter.instance_slug }}-openedx') }}"
 MONGODB_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
 MONGODB_PASSWORD: "{{ generate_password() }}"
-MONGODB_HOST: "{{ env('PHD_MONGODB_HOST') or 'mongodb' }}"
-MONGODB_PORT: "{{ env('PHD_MONGODB_PORT') or '27017' }}"
+MONGODB_HOST: "{{ env('PHD_MONGODB_HOST', 'mongodb') }}"
+MONGODB_PORT: "{{ env('PHD_MONGODB_PORT', '27017') }}"
 MONGODB_USE_SSL: true
 MONGODB_AUTH_MECHANISM: "SCRAM-SHA-1"
-MONGODB_AUTH_SOURCE: "{{ env('PHD_MONGODB_AUTH_SOURCE') or 'admin' }}"
-MONGODB_REPLICA_SET: "{{ env('PHD_MONGODB_REPLICA_SET') or '' }}"
-FORUM_MONGODB_DATABASE: "{{ env('PHD_MONGODB_DATABASE_FORUM') or 'phd-{{ cookiecutter.instance_slug }}-forum' }}"
+MONGODB_AUTH_SOURCE: "{{ env('PHD_MONGODB_AUTH_SOURCE', 'admin') }}"
+MONGODB_REPLICA_SET: "{{ env('PHD_MONGODB_REPLICA_SET', '') }}"
+FORUM_MONGODB_DATABASE: "{{ env('PHD_MONGODB_DATABASE_FORUM', 'phd-{{ cookiecutter.instance_slug }}-forum') }}"
 
 # Storage configuration
 STORAGE_BUCKET_NAME: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"
