@@ -51,3 +51,17 @@ jobs:
       PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
       PHD_CLI_VERSION: ${{ inputs.PHD_CLI_VERSION }}
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+      UPDATE_ENV_DIR: false
+
+  update-env-dir:
+    name: Update env directory
+    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@gabor/experiment
+    needs:
+      - build
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    with:
+      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
+      STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
+      STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
+      RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}

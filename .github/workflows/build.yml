@@ -32,6 +32,11 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      UPDATE_ENV_DIR:
+        description: "Whether to update the env directory"
+        required: false
+        type: boolean
+        default: true
     outputs:
       image_name:
         description: "Full image name (repo/name:tag)"
@@ -69,4 +74,18 @@ jobs:
       PICASSO_VERSION: ${{ inputs.PICASSO_VERSION }}
       PYTHON_VERSION: 3.12
       UPDATE_IMAGE_TAG_IN_REPO: true
+      RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+
+  update-env-dir:
+    if: ${{ inputs.UPDATE_ENV_DIR }}
+    name: Update env directory
+    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@gabor/experiment
+    needs:
+      - build
+    secrets:
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    with:
+      INSTANCE_NAME: ${{ inputs.INSTANCE_NAME }}
+      STRAIN_REPOSITORY: ${{ inputs.STRAIN_REPOSITORY }}
+      STRAIN_REPOSITORY_BRANCH: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
       RUNNER_WORKFLOW_LABEL: ${{ inputs.RUNNER_WORKFLOW_LABEL }}

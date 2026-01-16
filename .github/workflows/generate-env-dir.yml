@@ -1,0 +1,102 @@
+name: Generate env directory
+run-name: Generate env directory for '${{ inputs.INSTANCE_NAME }}'
+
+on:
+  workflow_call:
+    inputs:
+      INSTANCE_NAME:
+        description: "Instance name"
+        required: true
+        type: string
+      STRAIN_REPOSITORY:
+        description: 'The repository for strains to checkout. It should follow the format: ORGANIZATION/REPO'
+        required: true
+        type: string
+      STRAIN_REPOSITORY_BRANCH:
+        description: 'The branch of the repository to checkout'
+        required: true
+        type: string
+      RUNNER_WORKFLOW_LABEL:
+        description: 'The label of the runner workflow to run'
+        required: false
+        type: string
+        default: "ubuntu-latest"
+    secrets:
+      SSH_PRIVATE_KEY:
+        description: "Private SSH key for accessing private repositories"
+        required: true
+
+jobs:
+  generate-env-dir:
+    name: Generate env directory
+    runs-on: ${{ inputs.RUNNER_WORKFLOW_LABEL }}
+    concurrency:
+      group: generate-env-dir-${{ inputs.INSTANCE_NAME }}
+      cancel-in-progress: true
+    permissions:
+      contents: write
+    env:
+      TUTOR_ROOT: ${{ github.workspace }}/instances/${{ inputs.INSTANCE_NAME }}
+      TUTOR_PLUGINS_ROOT: ${{ github.workspace }}/instances/${{ inputs.INSTANCE_NAME }}/plugins
+    steps:
+      - name: Checkout strains repository for build configurations
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.STRAIN_REPOSITORY }}
+          ref: ${{ inputs.STRAIN_REPOSITORY_BRANCH }}
+          ssh-key: ${{ inputs.STRAIN_REPOSITORY != github.repository && secrets.SSH_PRIVATE_KEY || '' }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Setup SSH agent for private repositories cloning
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        if: env.SSH_PRIVATE_KEY
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+            ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add GitHub to known hosts
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        if: env.SSH_PRIVATE_KEY
+        run: |
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Configure git user
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Install Tutor and its dependencies from the version specified in the config.yml
+        run: |
+          TUTOR_VERSION=$(sed -n 's/^TUTOR_VERSION: //p' instances/${{ inputs.INSTANCE_NAME }}/config.yml)
+          pip install git+https://github.com/overhangio/tutor.git@$TUTOR_VERSION
+
+      - name: Enable and install picasso plugin in Tutor environment
+        run: |
+          pip install git+https://github.com/eduNEXT/tutor-contrib-picasso@v0.2.0
+          tutor plugins enable picasso
+
+      - name: Update config and generate env directory
+        run: |
+          rm -rf "instances/${{ inputs.INSTANCE_NAME }}/env"
+          mkdir -p "instances/${{ inputs.INSTANCE_NAME }}/env"
+          tutor picasso run-extra-commands
+          tutor config save
+
+      - name: Commit config and env directory
+        run: |
+          git add -A "instances/${{ inputs.INSTANCE_NAME }}"
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: update tutor env and config for ${{ inputs.INSTANCE_NAME }}"
+          git pull origin "${{ inputs.STRAIN_REPOSITORY_BRANCH }}" --rebase
+          git push
