@@ -54,6 +54,7 @@ MONGODB_USE_SSL: true
 MONGODB_AUTH_MECHANISM: "SCRAM-SHA-1"
 MONGODB_AUTH_SOURCE: "{{ env('PHD_MONGODB_AUTH_SOURCE') or 'admin' }}"
 MONGODB_REPLICA_SET: "{{ env('PHD_MONGODB_REPLICA_SET') or '' }}"
+FORUM_MONGODB_DATABASE: "{{ env('PHD_MONGODB_DATABASE_FORUM') or 'phd-{{ cookiecutter.instance_slug }}-forum' }}"
 
 # Storage configuration
 STORAGE_BUCKET_NAME: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"
