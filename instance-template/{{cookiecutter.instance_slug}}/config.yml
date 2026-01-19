@@ -18,15 +18,7 @@ TUTOR_VERSION: "{{ cookiecutter.tutor_version }}"
 PLATFORM_NAME: "{{ cookiecutter.platform_description }}"
 EDX_PLATFORM_REPOSITORY: "{{ cookiecutter.platform_repository }}"
 EDX_PLATFORM_VERSION: "{{ cookiecutter.platform_version }}"
-OPENEDX_EXTRA_PIP_REQUIREMENTS:
-  - git+https://github.com/eduNEXT/eox-tenant@v14.0.0
-  - cssselect==1.2.0
-  - h5p-xblock==0.2.17
-  - openedx-scorm-xblock==19.0.2
-  - xblock-free-text-response==4.1.0
-  - xblock-submit-and-compare==3.1.0
-  - xblock-image-explorer==3.0.2
-  - edx-sga==0.26.0
+OPENEDX_EXTRA_PIP_REQUIREMENTS: []
 
 # Ingress and HTTP configuration
 ENABLE_HTTPS: true
@@ -66,6 +58,6 @@ STORAGE_ENDPOINT_URL: "{{ storage_endpoint_url(env('PHD_STORAGE_TYPE'), env('PHD
 PICASSO_EXTRA_COMMANDS:
   - pip install tutor-contrib-drydock
   - tutor plugins index add https://raw.githubusercontent.com/eduNEXT/tutor-plugin-indexes/teak/
-  - tutor plugins install forum mfe mfe-extensions sentry
-  - tutor plugins enable drydock forum mfe mfe-extensions sentry
+  - tutor plugins install forum mfe mfe-extensions
+  - tutor plugins enable drydock forum mfe mfe-extensions
   - tutor picasso enable-private-packages

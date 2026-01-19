@@ -15,8 +15,6 @@ The backend uses a `tfstate-phd-{{ cookiecutter.cluster_slug_normalized }}-clust
 Create a new `backend.hcl` file in the infrastructure directory:
 
 ```hcl
-bucket     = "tfstate-phd-{{ cookiecutter.cluster_slug_normalized }}-cluster-{{ cookiecutter.environment }}"
-key        = "terraform.tfstate"
 access_key = "<ACCESS KEY ID>"
 secret_key = "<SECRET ACCESS KEY>"
 ```
