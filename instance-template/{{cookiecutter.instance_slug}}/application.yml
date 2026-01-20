@@ -20,7 +20,7 @@ spec:
     namespace: "{{cookiecutter.instance_slug}}"
   syncPolicy:
     automated:
-      enabled: false
+      enabled: true
       prune: true
     syncOptions:
       - CreateNamespace=true
