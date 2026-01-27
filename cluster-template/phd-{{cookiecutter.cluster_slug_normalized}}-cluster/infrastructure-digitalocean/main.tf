@@ -1,6 +1,12 @@
 locals {
   context_file = jsondecode(file("${path.module}/../context.json"))
 
+  # Kubernetes cluster nodes
+  kubernetes_worker_node_size       = "m-4vcpu-32gb"
+  kubernetes_cluster_min_node_count = 3
+  kubernetes_cluster_max_node_count = 5
+
+  # Kubernetes cluster environment
   kubernetes_cluster_domain      = local.context_file.cluster_domain
   kubernetes_cluster_environment = local.context_file.environment
 
@@ -10,6 +16,16 @@ locals {
   # Velero plugin versions
   velero_aws_plugin_tag          = "v1.9.0" # https://github.com/vmware-tanzu/velero-plugin-for-aws/releases
   velero_digitalocean_plugin_tag = "v1.1.0" # https://github.com/digitalocean/velero-plugin/releases
+
+  # MySQL
+  mysql_version           = "8"
+  mysql_instance_size     = "db-s-1vcpu-2gb"
+  mysql_cluster_instances = 2
+
+  # MongoDB
+  mongodb_version           = "7"
+  mongodb_instance_size     = "db-s-4vcpu-8gb"
+  mongodb_cluster_instances = 1
 }
 
 module "main_vpc" {
@@ -30,6 +46,10 @@ module "kubernetes_cluster" {
 
   cluster_name       = var.kubernetes_cluster_name
   kubernetes_version = var.kubernetes_version
+
+  worker_node_size      = local.kubernetes_worker_node_size
+  worker_node_min_count = local.kubernetes_cluster_min_node_count
+  worker_node_max_count = local.kubernetes_cluster_max_node_count
 }
 
 module "mysql_database" {
@@ -42,9 +62,9 @@ module "mysql_database" {
   kubernetes_cluster_name = var.kubernetes_cluster_name
 
   database_engine                  = "mysql"
-  database_engine_version          = var.mysql_version
-  database_cluster_instances       = var.mysql_cluster_instances
-  database_cluster_instance_size   = var.mysql_instance_size
+  database_engine_version          = local.mysql_version
+  database_cluster_instances       = local.mysql_cluster_instances
+  database_cluster_instance_size   = local.mysql_instance_size
   database_maintenance_window_day  = "sunday"
   database_maintenance_window_time = "01:00:00"
 
@@ -68,9 +88,9 @@ module "mongodb_database" {
   kubernetes_cluster_name = var.kubernetes_cluster_name
 
   database_engine                  = "mongodb"
-  database_engine_version          = var.mongodb_version
-  database_cluster_instances       = var.mongodb_cluster_instances
-  database_cluster_instance_size   = var.mongodb_instance_size
+  database_engine_version          = local.mongodb_version
+  database_cluster_instances       = local.mongodb_cluster_instances
+  database_cluster_instance_size   = local.mongodb_instance_size
   database_maintenance_window_day  = "sunday"
   database_maintenance_window_time = "1:00"
 

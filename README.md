@@ -189,7 +189,7 @@ phd_create_instance my-instance \
   "https://github.com/your-org/your-cluster.git" \
   "My Open edX Platform" \
   --edx-platform-repository "https://github.com/openedx/edx-platform.git" \
-  --edx-platform-version "release/teak" \
+  --edx-platform-version "release/teak.3" \
   --tutor-version "v20.0.1"
 ```
 
@@ -264,7 +264,63 @@ export PHD_CLUSTER_DOMAIN="your-cluster-domain.com"
 export PHD_ARGOCD_VERSION="stable"
 export PHD_ARGO_WORKFLOWS_VERSION="stable"
 export PHD_OPENCRAFT_MANIFESTS_URL="https://raw.githubusercontent.com/open-craft/phd-cluster-template/main/manifests"
+
+# Docker Registry (for private image pulls)
+export PHD_DOCKER_REGISTRY="ghcr.io"  # Default: ghcr.io
+export PHD_DOCKER_REGISTRY_CREDENTIALS="base64_encoded_username:token"
 ```
+
+**Docker Registry Credentials**:
+
+The PHD CLI automatically configures cluster-wide Docker registry pull credentials to enable pulling private images from container registries. This is set up automatically during:
+
+- **Cluster bootstrap**: When running `phd_install_argo`, credentials are configured for system namespaces (`argo`, `argocd`, `default`) and all existing non-system namespaces
+- **Instance creation**: When running `phd_create_instance`, credentials are automatically configured for the new instance namespace
+
+**Format**:
+
+The `PHD_DOCKER_REGISTRY_CREDENTIALS` must be a base64-encoded string in the format `username:token` or `username:password`. This is the same format used in Docker's `~/.docker/config.json` file.
+
+**Examples**:
+
+For GitHub Container Registry (GHCR):
+```bash
+# Generate credentials (replace USERNAME and TOKEN with your actual values)
+echo -n "USERNAME:TOKEN" | base64
+# Output: VVNFUk5BTUU6VE9LRU4=
+
+export PHD_DOCKER_REGISTRY="ghcr.io"
+export PHD_DOCKER_REGISTRY_CREDENTIALS="VVNFUk5BTUU6VE9LRU4="
+```
+
+For Docker Hub:
+```bash
+# Generate credentials
+echo -n "dockerhub_username:dockerhub_token" | base64
+
+export PHD_DOCKER_REGISTRY="docker.io"
+export PHD_DOCKER_REGISTRY_CREDENTIALS="base64_encoded_credentials"
+```
+
+For other registries (e.g., AWS ECR, Google GCR, Azure ACR):
+```bash
+# Use the registry-specific authentication format
+# For AWS ECR, you might use an IAM role token
+# For GCR, use a service account JSON key
+# Format: echo -n "username:token" | base64
+
+export PHD_DOCKER_REGISTRY="your-registry.example.com"
+export PHD_DOCKER_REGISTRY_CREDENTIALS="base64_encoded_credentials"
+```
+
+**How it works**:
+
+1. The CLI creates a Kubernetes `Secret` of type `kubernetes.io/dockerconfigjson` in each namespace
+2. The secret is automatically attached to ServiceAccounts (`default` and `workflow-executor`) via `imagePullSecrets`
+3. All pods using these ServiceAccounts can now pull images from the private registry
+4. The configuration is idempotent - running the setup multiple times is safe
+
+**Note**: If `PHD_DOCKER_REGISTRY_CREDENTIALS` is not set, the registry credential setup is skipped. This is safe for clusters that only use public images.
 
 ### Automatic Kubeconfig Management
 
@@ -577,6 +633,28 @@ For GitHub Actions, configure:
 - `PHD_STORAGE_REGION`: Storage region (e.g., `us-east-1` or `nyc3`)
 - `PHD_STORAGE_ACCESS_KEY_ID`: Storage access key ID
 - `PHD_STORAGE_SECRET_ACCESS_KEY`: Storage secret access key
+
+**Docker Registry** (Required for private image pulls):
+- `PHD_DOCKER_REGISTRY`: Docker registry hostname (default: `ghcr.io`)
+  - Examples: `ghcr.io`, `docker.io`, `registry.example.com`
+- `PHD_DOCKER_REGISTRY_CREDENTIALS`: Base64-encoded credentials in format `username:token`
+  - Generate with: `echo -n "username:token" | base64`
+  - For GitHub Container Registry: Use a GitHub Personal Access Token (PAT) with `read:packages` permission
+  - For Docker Hub: Use Docker Hub username and access token
+  - For other registries: Follow registry-specific authentication requirements
+
+**Example for GitHub Container Registry**:
+```bash
+# Create a GitHub PAT with 'read:packages' permission
+# Then generate the credentials:
+echo -n "github_username:ghp_your_personal_access_token" | base64
+
+# Set in GitHub Secrets:
+PHD_DOCKER_REGISTRY="ghcr.io"
+PHD_DOCKER_REGISTRY_CREDENTIALS="<base64_output_from_above>"
+```
+
+> **Note**: Registry credentials are automatically configured cluster-wide during `phd_install_argo` and for each new instance namespace during `phd_create_instance`. The credentials are stored as Kubernetes secrets and attached to ServiceAccounts to enable automatic image pulls.
 
 **Terraform Backend** (Required for state storage):
 - `AWS_ACCESS_KEY_ID`: Backend storage access key (same as `PHD_STORAGE_ACCESS_KEY_ID`)

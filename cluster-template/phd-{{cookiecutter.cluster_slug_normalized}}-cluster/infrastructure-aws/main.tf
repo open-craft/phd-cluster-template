@@ -1,6 +1,12 @@
 locals {
   context_file = jsondecode(file("${path.module}/../context.json"))
 
+  # Kubernetes cluster nodes
+  kubernetes_worker_node_size       = "m-4vcpu-32gb"
+  kubernetes_cluster_min_node_count = 2
+  kubernetes_cluster_max_node_count = 8
+
+  # Kubernetes cluster environment
   kubernetes_cluster_domain      = local.context_file.cluster_domain
   kubernetes_cluster_environment = local.context_file.environment
 
@@ -9,6 +15,16 @@ locals {
 
   # Velero plugin versions
   velero_aws_plugin_tag = "v1.9.0" # https://github.com/vmware-tanzu/velero-plugin-for-aws/releases
+
+  # MySQL
+  mysql_version           = "8"
+  mysql_instance_size     = "db.t3.micro"
+  mysql_cluster_instances = 1
+
+  # MongoDB
+  mongodb_version           = "7"
+  mongodb_instance_size     = "db.t3.medium"
+  mongodb_cluster_instances = 3
 }
 
 data "aws_caller_identity" "current" {}
@@ -47,6 +63,10 @@ module "kubernetes_cluster" {
 
   cluster_name       = var.kubernetes_cluster_name
   kubernetes_version = var.kubernetes_version
+
+  worker_node_size       = local.kubernetes_worker_node_size
+  cluster_min_node_count = local.kubernetes_cluster_min_node_count
+  cluster_max_node_count = local.kubernetes_cluster_max_node_count
 }
 
 module "kubernetes_cert_manager" {
@@ -112,9 +132,9 @@ module "mysql_database" {
   kubernetes_cluster_name = var.kubernetes_cluster_name
 
   database_engine                  = "mysql"
-  database_engine_version          = var.mysql_version
-  database_cluster_instances       = var.mysql_cluster_instances
-  database_cluster_instance_size   = var.mysql_instance_size
+  database_engine_version          = local.mysql_version
+  database_cluster_instances       = local.mysql_cluster_instances
+  database_cluster_instance_size   = local.mysql_instance_size
   database_maintenance_window_day  = "sunday"
   database_maintenance_window_time = "01:00:00"
 
@@ -138,9 +158,9 @@ module "mongodb_database" {
   kubernetes_cluster_name = var.kubernetes_cluster_name
 
   database_engine                  = "mongodb"
-  database_engine_version          = var.mongodb_version
-  database_cluster_instances       = var.mongodb_cluster_instances
-  database_cluster_instance_size   = var.mongodb_instance_size
+  database_engine_version          = local.mongodb_version
+  database_cluster_instances       = local.mongodb_cluster_instances
+  database_cluster_instance_size   = local.mongodb_instance_size
   database_maintenance_window_day  = "sunday"
   database_maintenance_window_time = "1:00"
 

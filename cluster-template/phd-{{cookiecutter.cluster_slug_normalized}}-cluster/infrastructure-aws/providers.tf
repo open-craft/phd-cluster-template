@@ -4,8 +4,11 @@ terraform {
     key    = "terraform.tfstate"
     region = var.region
 
-    # Access credentials should be provided via environment variables:
-    # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+    # Access credentials should be provided via via the `backend.hcl`:
+    # access_key = "<KEY_ID>"
+    # secret_key = "<SECRET_KEY>"
+    #
+    # `terraform init -backend-config=backend.hcl`
   }
 
   required_providers {

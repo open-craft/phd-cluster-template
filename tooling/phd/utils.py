@@ -294,7 +294,10 @@ def build_instance_config(  # pylint: disable=too-many-locals,too-many-positiona
     # MongoDB connection parameters
     instance_config.update(
         {
-            "PHD_INSTANCE_MONGODB_DATABASE": config_data.get("MONGODB_DATABASE", ""),
+            "PHD_INSTANCE_MONGODB_DATABASE": config_data.get("MONGODB_DATABASE"),
+            "PHD_INSTANCE_MONGODB_DATABASE_FORUM": config_data.get(
+                "FORUM_MONGODB_DATABASE", ""
+            ),
             "PHD_INSTANCE_MONGODB_USERNAME": config_data.get("MONGODB_USERNAME", ""),
             "PHD_INSTANCE_MONGODB_PASSWORD": config_data.get("MONGODB_PASSWORD", ""),
             "PHD_INSTANCE_MONGODB_HOST": config_data.get("MONGODB_HOST", ""),
