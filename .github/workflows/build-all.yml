@@ -55,7 +55,7 @@ jobs:
 
   update-env-dir:
     name: Update env directory
-    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@gabor/experiment
+    uses: open-craft/phd-cluster-template/.github/workflows/generate-env-dir.yml@kaustav/use_custom_picasso_plugin
     needs:
       - build
     secrets:
