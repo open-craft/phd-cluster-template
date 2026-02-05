@@ -52,7 +52,7 @@ MONGODB_REPLICA_SET: "{{ env('PHD_MONGODB_REPLICA_SET', '') }}"
 FORUM_MONGODB_DATABASE: "phd-{{ cookiecutter.instance_slug }}-forum"
 
 # Storage configuration
-S3_BUCKET_NAME: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"
+S3_STORAGE_BUCKET: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"
 STORAGE_BUCKET_NAME: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"
 STORAGE_TYPE: "{{ env('PHD_STORAGE_TYPE') }}"
 STORAGE_REGION: "{{ env('PHD_STORAGE_REGION') }}"
