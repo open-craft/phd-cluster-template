@@ -175,7 +175,7 @@ class KubernetesClient:
         try:
             yaml_content = yaml.dump(doc, default_flow_style=False)
             result = subprocess.run(
-                ["kubectl", "apply", "-f", "-", "-n", namespace],
+                ["kubectl", "apply", "--server-side", "-f", "-", "-n", namespace],
                 input=yaml_content,
                 text=True,
                 capture_output=True,
@@ -321,6 +321,52 @@ class KubernetesClient:
         except Exception as e:
             raise KubernetesError(
                 f"Failed to patch config map '{name}' in namespace '{namespace}': {e}"
+            ) from e
+
+    def ensure_role_has_pods_exec(self, name: str, namespace: str) -> None:
+        """
+        Ensure a namespaced Role has a rule allowing create on pods/exec.
+        Idempotent: no-op if the rule already exists (e.g. for Kubernetes 1.31+).
+
+        Args:
+            name: Role name
+            namespace: Namespace containing the role
+
+        Raises:
+            KubernetesError: If the Role cannot be read or patched
+        """
+        self._logger.debug(
+            "Ensuring role '%s' in namespace '%s' has pods/exec create rule",
+            name,
+            namespace,
+        )
+        try:
+            role = self._rbac_v1.read_namespaced_role(name=name, namespace=namespace)
+        except Exception as e:
+            raise KubernetesError(
+                f"Failed to read role '{name}' in namespace '{namespace}': {e}"
+            ) from e
+
+        for rule in role.rules or []:
+            if "pods/exec" in (rule.resources or []) and "create" in (rule.verbs or []):
+                self._logger.debug("Role already has pods/exec create rule")
+                return
+
+        new_rule = client.V1PolicyRule(
+            api_groups=[""],
+            resources=["pods/exec"],
+            verbs=["create"],
+        )
+
+        role.rules = list(role.rules or []) + [new_rule]
+
+        try:
+            self._rbac_v1.patch_namespaced_role(
+                name=name, namespace=namespace, body=role
+            )
+        except Exception as e:
+            raise KubernetesError(
+                f"Failed to patch role '{name}' in namespace '{namespace}': {e}"
             ) from e
 
     def read_config_map(self, name: str, namespace: str) -> client.V1ConfigMap:

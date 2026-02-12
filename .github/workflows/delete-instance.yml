@@ -116,6 +116,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PHD_STORAGE_SECRET_ACCESS_KEY }}
         run: |
           tofu init -input=false
+          tofu refresh
 
       - name: Delete instance
         env:

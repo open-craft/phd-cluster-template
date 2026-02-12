@@ -5,10 +5,8 @@ Argo user create command.
 import argparse
 import base64
 import getpass
-import time
 
 from phd.cli.utils import exit_with_error, run_command_with_logging
-from phd.config import get_config
 from phd.exceptions import KubernetesError
 from phd.kubeconfig import setup_kubeconfig
 from phd.kubernetes import KubernetesClient
@@ -23,10 +21,7 @@ logger = get_logger(__name__)
 
 VALID_ROLES = ["admin", "developer", "readonly"]
 DEFAULT_ROLE = "developer"
-ARGO_NAMESPACE = "argo"
 ARGOCD_NAMESPACE = "argocd"
-TOKEN_WAIT_TIMEOUT = 30
-TOKEN_WAIT_INTERVAL = 1
 
 
 def _prompt_for_password(username: str) -> str:
@@ -103,58 +98,6 @@ def _update_rbac_policy(  # pylint: disable=duplicate-code
     )
 
 
-def _configure_argo_workflows_user(
-    k8s_client: KubernetesClient,
-    username: str,
-    role: str,
-    password_hash: str,
-) -> None:
-    """
-    Configure Argo Workflows user with SSO and RBAC.
-
-    Args:
-        k8s_client: Kubernetes client
-        username: Username to configure
-        role: Role to assign
-        password_hash: Bcrypt password hash
-    """
-
-    enabled_b64 = base64.b64encode(b"true").decode("utf-8")
-    hash_b64 = base64.b64encode(password_hash.encode("utf-8")).decode("utf-8")
-    tokens_b64 = base64.b64encode(b"").decode("utf-8")
-
-    # Sanitize username for use as Kubernetes secret key
-    sanitized_username = sanitize_username(username)
-
-    run_command_with_logging(
-        logger,
-        f"update Argo Workflows SSO secret for user '{username}'",
-        k8s_client.patch_secret,
-        name="argo-server-sso",
-        namespace=ARGO_NAMESPACE,
-        data={
-            f"accounts.{sanitized_username}.enabled": enabled_b64,
-            f"accounts.{sanitized_username}.password": hash_b64,
-            f"accounts.{sanitized_username}.tokens": tokens_b64,
-        },
-    )
-
-    _update_rbac_policy(
-        k8s_client,
-        "argo-server-rbac-config",
-        ARGO_NAMESPACE,
-        sanitized_username,
-        role,
-    )
-
-    log_success(
-        logger,
-        f"Argo Workflows user '{username}' configured with role '{role}'",
-    )
-    logger.warning("Restart the argo-server pod to apply login changes:")
-    logger.warning("  kubectl delete pod -n argo -l app=argo-server")
-
-
 def _configure_argocd_user(
     k8s_client: KubernetesClient,
     username: str,
@@ -221,147 +164,11 @@ def _configure_argocd_user(
     )
 
 
-def _wait_for_token_generation(
-    k8s_client: KubernetesClient,
-    username: str,
-    timeout: int = TOKEN_WAIT_TIMEOUT,
-) -> str:
-    """
-    Wait for service account token to be generated.
-
-    Args:
-        k8s_client: Kubernetes client
-        username: Username for which to wait for token
-        timeout: Maximum time to wait in seconds
-
-    Returns:
-        The generated token
-
-    Raises:
-        KubernetesError: If token generation times out
-    """
-
-    logger.info("Waiting for token to be generated...")
-    token_secret_name = f"{username}-token"
-
-    for _ in range(timeout):
-        try:
-            secret = k8s_client.read_secret(
-                name=token_secret_name, namespace=ARGO_NAMESPACE
-            )
-            if secret.data and "token" in secret.data:
-                token = base64.b64decode(secret.data["token"]).decode("utf-8")
-                return token
-        except Exception:  # pylint: disable=broad-exception-caught
-            pass
-        time.sleep(TOKEN_WAIT_INTERVAL)
-
-    raise KubernetesError(f"Failed to generate token for user '{username}'")
-
-
-def _create_service_account_and_token(
-    k8s_client: KubernetesClient,
-    username: str,
-    role: str,
-) -> str:
-    """
-    Create service account, RBAC, and token secret for Argo Workflows API access.
-
-    Args:
-        k8s_client: Kubernetes client
-        username: Username to create service account for
-        role: Role to assign
-
-    Returns:
-        The generated access token
-
-    Raises:
-        KubernetesError: If token generation fails
-    """
-
-    logger.info("Creating Argo Workflows access token for user '%s'", username)
-
-    config = get_config()
-    manifests_url = config.cluster.opencraft_manifests_url  # pylint: disable=no-member
-
-    # Use DNS-1123 safe name for K8s objects (service account, bindings)
-    k8s_name = sanitize_username(username)
-
-    run_command_with_logging(
-        logger,
-        f"create service account for user '{username}'",
-        k8s_client.apply_manifest,
-        f"""
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: {k8s_name}
-  namespace: {ARGO_NAMESPACE}
-""",
-        ARGO_NAMESPACE,
-    )
-
-    role_manifest_map = {
-        "admin": f"{manifests_url}/argo-user-admin-role.yml",
-        "developer": f"{manifests_url}/argo-user-developer-role.yml",
-        "readonly": f"{manifests_url}/argo-user-readonly-role.yml",
-    }
-
-    variables = {"PHD_ARGO_USERNAME": k8s_name, "PHD_ARGO_ROLE": role}
-
-    run_command_with_logging(
-        logger,
-        f"create {role} role for user '{username}'",
-        k8s_client.apply_manifest_from_url,
-        role_manifest_map[role],
-        ARGO_NAMESPACE,
-        variables,
-    )
-
-    run_command_with_logging(
-        logger,
-        f"create role bindings for user '{username}'",
-        k8s_client.apply_manifest_from_url,
-        f"{manifests_url}/argo-user-bindings.yml",
-        ARGO_NAMESPACE,
-        variables,
-    )
-
-    run_command_with_logging(
-        logger,
-        f"create token secret for user '{username}'",
-        k8s_client.apply_manifest_from_url,
-        f"{manifests_url}/argo-user-token-secret.yml",
-        ARGO_NAMESPACE,
-        variables,
-    )
-
-    token = _wait_for_token_generation(k8s_client, k8s_name)
-
-    run_command_with_logging(
-        logger,
-        f"configure token for UI access for user '{username}'",
-        k8s_client.patch_secret,
-        name="argo-server-sso",
-        namespace=ARGO_NAMESPACE,
-        string_data={
-            f"accounts.{sanitize_username(username)}.tokens": token,
-        },
-    )
-
-    return token
-
-
 def create_argo_user(
     username: str, role: str = DEFAULT_ROLE, password: str = ""
 ) -> None:
     """
-    Create an Argo user with the specified role and password.
-
-    This orchestrates the creation of an Argo user across:
-    - Argo Workflows (SSO and RBAC)
-    - ArgoCD (account and RBAC)
-    - Kubernetes service account and token for API access
+    Create an ArgoCD user with the specified role and password.
 
     Args:
         username: Username to create
@@ -384,34 +191,14 @@ def create_argo_user(
     logger.info("Creating user '%s' with role '%s'", username, role)
 
     k8s_client = KubernetesClient()
-    config = get_config()
     password_hash = bcrypt_password(password)
-
-    _configure_argo_workflows_user(k8s_client, username, role, password_hash)
 
     _configure_argocd_user(k8s_client, username, role, password_hash)
 
-    token = _create_service_account_and_token(k8s_client, username, role)
-
     log_success(
         logger,
-        f"Argo Workflows access token created successfully for user '{username}'",
+        f"ArgoCD user '{username}' created successfully with role '{role}'",
     )
-    logger.warning("Argo Workflows API and UI Token for user '%s':", username)
-    logger.warning("  %s", token)
-    logger.info("")
-    logger.info("This token can be used with:")
-    logger.info(
-        '  curl -H "Authorization: Bearer $TOKEN" https://workflows.%s/api/v1/workflows/argo',
-        config.cluster.cluster_domain,  # pylint: disable=no-member
-    )
-    logger.info(
-        "  argo --server=https://workflows.%s --token=$TOKEN list",
-        config.cluster.cluster_domain,  # pylint: disable=no-member
-    )
-    logger.info("")
-    logger.warning("Restart the argo-server pod to apply UI token changes:")
-    logger.warning("  kubectl delete pod -n argo -l app=argo-server")
 
 
 def main() -> None:

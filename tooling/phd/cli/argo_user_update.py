@@ -5,7 +5,6 @@ Argo user update command.
 import argparse
 
 from phd.cli.utils import exit_with_error, run_command_with_logging
-from phd.config import get_config
 from phd.exceptions import KubernetesError
 from phd.kubeconfig import setup_kubeconfig
 from phd.kubernetes import KubernetesClient
@@ -15,7 +14,6 @@ logger = get_logger(__name__)
 
 VALID_ROLES = ["admin", "developer", "readonly"]
 DEFAULT_ROLE = "developer"
-ARGO_NAMESPACE = "argo"
 ARGOCD_NAMESPACE = "argocd"
 
 
@@ -66,54 +64,9 @@ def _update_rbac_policy(  # pylint: disable=duplicate-code
     )
 
 
-def _apply_role_manifests(
-    k8s_client: KubernetesClient,
-    username: str,
-    role: str,
-    manifests_url: str,
-) -> None:
-    """
-    Apply role-specific RBAC manifests for Argo Workflows.
-
-    Args:
-        k8s_client: Kubernetes client
-        username: Username to apply manifests for
-        role: Role to apply
-        manifests_url: Base URL for manifests
-    """
-
-    role_manifest_map = {
-        "admin": f"{manifests_url}/argo-user-admin-role.yml",
-        "developer": f"{manifests_url}/argo-user-developer-role.yml",
-        "readonly": f"{manifests_url}/argo-user-readonly-role.yml",
-    }
-
-    variables = {"PHD_ARGO_USERNAME": username, "PHD_ARGO_ROLE": role}
-
-    run_command_with_logging(
-        logger,
-        f"update {role} role for user '{username}'",
-        k8s_client.apply_manifest_from_url,
-        role_manifest_map[role],
-        ARGO_NAMESPACE,
-        variables,
-    )
-
-    run_command_with_logging(
-        logger,
-        f"update role bindings for user '{username}'",
-        k8s_client.apply_manifest_from_url,
-        f"{manifests_url}/argo-user-bindings.yml",
-        ARGO_NAMESPACE,
-        variables,
-    )
-
-
 def update_argo_user_permissions(username: str, role: str = DEFAULT_ROLE) -> None:
     """
-    Update Argo user permissions to the specified role.
-
-    Updates RBAC policies for both Argo Workflows and ArgoCD.
+    Update ArgoCD user permissions to the specified role.
 
     Args:
         username: Username to update
@@ -132,22 +85,6 @@ def update_argo_user_permissions(username: str, role: str = DEFAULT_ROLE) -> Non
     logger.info("Updating permissions for user '%s' with role '%s'", username, role)
 
     k8s_client = KubernetesClient()
-    config = get_config()
-
-    _apply_role_manifests(
-        k8s_client,
-        username,
-        role,
-        config.cluster.opencraft_manifests_url,  # pylint: disable=no-member
-    )
-
-    _update_rbac_policy(
-        k8s_client,
-        "argo-server-rbac-config",
-        ARGO_NAMESPACE,
-        username,
-        role,
-    )
 
     _update_rbac_policy(
         k8s_client,
@@ -169,7 +106,7 @@ def main() -> None:
     """
 
     parser = argparse.ArgumentParser(
-        description="Update Argo user permissions to specified role"
+        description="Update ArgoCD user permissions to specified role"
     )
     parser.add_argument("username", help="Username to update")
     parser.add_argument(

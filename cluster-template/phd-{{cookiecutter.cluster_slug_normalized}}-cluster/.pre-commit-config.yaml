@@ -4,6 +4,8 @@ fail_fast: false
 default_stages: [pre-commit, pre-push]
 default_install_hook_types: [pre-commit]
 
+exclude: "^instances/.*/env/.*$"
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -32,6 +34,7 @@ repos:
       - id: check-symlinks
       - id: destroyed-symlinks
       - id: detect-private-key
+        exclude: "^instances/.*/config.yml$"
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: trailing-whitespace
