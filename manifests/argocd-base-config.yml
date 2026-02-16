@@ -9,3 +9,4 @@ metadata:
     app.kubernetes.io/part-of: argocd
 data:
   users.anonymous.enabled: "false"
+  exec.enabled: "true"

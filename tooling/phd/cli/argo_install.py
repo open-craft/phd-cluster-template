@@ -285,6 +285,14 @@ def install_argocd(cluster_config: ClusterConfig) -> None:
 
     run_command_with_logging(
         logger,
+        "ensure ArgoCD server role allows web terminal (pods/exec)",
+        k8s.ensure_role_has_pods_exec,
+        "argocd-server",
+        "argocd",
+    )
+
+    run_command_with_logging(
+        logger,
         "configure ArgoCD ingress",
         k8s.apply_manifest_from_url,
         f"{cluster_config.opencraft_manifests_url}/argocd-ingress.yml",
