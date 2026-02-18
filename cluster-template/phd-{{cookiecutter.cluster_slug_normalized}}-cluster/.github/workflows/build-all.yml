@@ -28,10 +28,7 @@ on:
 jobs:
   build-all:
     name: Build all services
-    uses: open-craft/phd-cluster-template/.github/workflows/build-all.yml@main
-    permissions:
-      packages: write
-      contents: write
+    uses: open-craft/phd-cluster-template/.github/workflows/build-all.yml@gabor/experiment
     secrets:
       SSH_PRIVATE_KEY: {% raw %}${{ secrets.SSH_PRIVATE_KEY }}{% endraw %}
     with:

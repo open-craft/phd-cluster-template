@@ -18,6 +18,8 @@ spec:
         description: "Target namespace for deployment"
       - name: database-name
         description: "Name of the database to create"
+      - name: forum-database-name
+        description: "Name of the forum database to create"
       - name: username
         description: "Database username to create"
       - name: password
@@ -105,26 +107,30 @@ spec:
           set -e
 
           DATABASE_NAME="{{workflow.parameters.database-name}}"
+          FORUM_DATABASE_NAME="{{workflow.parameters.forum-database-name}}"
           MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
 
-          echo "Creating database via DigitalOcean API: $DATABASE_NAME"
+          for DB in "$DATABASE_NAME" "$FORUM_DATABASE_NAME"; do
+            if [ -z "$DB" ]; then
+              continue
+            fi
+            echo "Creating database via DigitalOcean API: $DB"
 
-          # Create database
-          echo "Creating database: $DATABASE_NAME"
-          RESPONSE=$(curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
-            -d "{\"name\": \"$DATABASE_NAME\"}" \
-            "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/dbs")
+            RESPONSE=$(curl -s -X POST \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+              -d "{\"name\": \"$DB\"}" \
+              "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/dbs")
 
-          if echo "$RESPONSE" | grep -q "\"name\":\"$DATABASE_NAME\""; then
-            echo "Database $DATABASE_NAME created successfully"
-          elif echo "$RESPONSE" | grep -q "already exists"; then
-            echo "Database $DATABASE_NAME already exists"
-          else
-            echo "Failed to create database $DATABASE_NAME: $RESPONSE"
-            exit 1
-          fi
+            if echo "$RESPONSE" | grep -q "\"name\":\"$DB\""; then
+              echo "Database $DB created successfully"
+            elif echo "$RESPONSE" | grep -q "already exists"; then
+              echo "Database $DB already exists"
+            else
+              echo "Failed to create database $DB: $RESPONSE"
+              exit 1
+            fi
+          done
 
     - name: create-user-digitalocean
       script:
@@ -139,24 +145,65 @@ spec:
 
           NAMESPACE="{{workflow.parameters.namespace}}"
           DATABASE_NAME="{{workflow.parameters.database-name}}"
+          FORUM_DATABASE_NAME="{{workflow.parameters.forum-database-name}}"
           USERNAME="{{workflow.parameters.username}}"
           PASSWORD="{{workflow.parameters.password}}"
           MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
           K8s_API_BEARER_TOKEN="{{workflow.parameters.k8s-api-bearer-token}}"
 
-          echo "Creating user via DigitalOcean API: $USERNAME"
+          echo "Ensuring MongoDB user via DigitalOcean API: $USERNAME"
 
           RESPONSE=$(curl -s -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
-            -d "{\"name\": \"$USERNAME\", \"settings\": {\"mongo_user_settings\": {\"databases\": [\"$DATABASE_NAME\"], \"role\": \"dbAdmin\"}}}" \
+            -d "{\"name\": \"$USERNAME\", \"settings\": {\"mongo_user_settings\": {\"databases\": [\"$DATABASE_NAME\", \"$FORUM_DATABASE_NAME\"], \"role\": \"readWrite\"}}}" \
             "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users")
 
           if echo "$RESPONSE" | grep -q "\"name\":\"$USERNAME\""; then
             echo "User $USERNAME created successfully"
             PASSWORD=$(echo "$RESPONSE" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
           elif echo "$RESPONSE" | grep -q "already exists"; then
-            echo "User $USERNAME already exists"
+            echo "User $USERNAME already exists; verifying it has access to $DATABASE_NAME and $FORUM_DATABASE_NAME"
+
+            USER_RESPONSE=$(curl -s -X GET \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+              "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users/$USERNAME")
+
+            # DigitalOcean managed databases are the source of truth; if the user does not
+            # have the expected databases/role, recreate it (DigitalOcean API does not reliably
+            # support in-place role updates for MongoDB users across all accounts/versions).
+            if echo "$USER_RESPONSE" | grep -q "$DATABASE_NAME" \
+              && echo "$USER_RESPONSE" | grep -q "$FORUM_DATABASE_NAME" \
+              && echo "$USER_RESPONSE" | grep -qi "readwrite"; then
+              echo "User $USERNAME already has the expected access; leaving it unchanged."
+            else
+              echo "User $USERNAME does not match expected access; recreating user via DigitalOcean API..."
+
+              DELETE_RESPONSE=$(curl -s -X DELETE \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+                "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users/$USERNAME")
+
+              # Give DigitalOcean a moment to finalize deletion before recreating.
+              sleep 3
+
+              RESPONSE=$(curl -s -X POST \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+                -d "{\"name\": \"$USERNAME\", \"settings\": {\"mongo_user_settings\": {\"databases\": [\"$DATABASE_NAME\", \"$FORUM_DATABASE_NAME\"], \"role\": \"readWrite\"}}}" \
+                "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/users")
+
+              if echo "$RESPONSE" | grep -q "\"name\":\"$USERNAME\""; then
+                echo "User $USERNAME recreated successfully"
+                PASSWORD=$(echo "$RESPONSE" | grep -o '"password":"[^"]*"' | cut -d'"' -f4)
+              else
+                echo "Failed to recreate user $USERNAME: $RESPONSE"
+                echo "User inspection response was: $USER_RESPONSE"
+                echo "User deletion response was: $DELETE_RESPONSE"
+                exit 1
+              fi
+            fi
           else
             echo "Failed to create user $USERNAME: $RESPONSE"
             exit 1

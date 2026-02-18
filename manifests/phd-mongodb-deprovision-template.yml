@@ -14,7 +14,8 @@ spec:
         description: "Target namespace for cleanup"
       - name: database-name
         description: "Name of the database to drop"
-        value: "openedx"
+      - name: forum-database-name
+        description: "Name of the forum database to drop"
       - name: username
         description: "Name of the user to drop"
         value: "openedx_user"
@@ -73,22 +74,27 @@ spec:
           set -e
 
           DATABASE_NAME="{{workflow.parameters.database-name}}"
+          FORUM_DATABASE_NAME="{{workflow.parameters.forum-database-name}}"
           MONGODB_CLUSTER_ID="{{workflow.parameters.mongodb-cluster-id}}"
 
-          echo "Deleting database via DigitalOcean API: $DATABASE_NAME"
+          for DB in "$DATABASE_NAME" "$FORUM_DATABASE_NAME"; do
+            if [ -z "$DB" ]; then
+              continue
+            fi
+            echo "Deleting database via DigitalOcean API: $DB"
 
-          # Delete database
-          RESPONSE=$(curl -s -X DELETE \
-            -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
-            "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/dbs/$DATABASE_NAME")
+            RESPONSE=$(curl -s -X DELETE \
+              -H "Authorization: Bearer $DIGITALOCEAN_TOKEN" \
+              "https://api.digitalocean.com/v2/databases/$MONGODB_CLUSTER_ID/dbs/$DB")
 
-          # Check response - DELETE returns 204 on success or error details
-          if [ $? -eq 0 ]; then
-            echo "Database $DATABASE_NAME deleted successfully or did not exist"
-          else
-            echo "Warning: Failed to delete database $DATABASE_NAME"
-            echo "Response: $RESPONSE"
-          fi
+            # Check response - DELETE returns 204 on success or error details
+            if [ $? -eq 0 ]; then
+              echo "Database $DB deleted successfully or did not exist"
+            else
+              echo "Warning: Failed to delete database $DB"
+              echo "Response: $RESPONSE"
+            fi
+          done
 
     - name: delete-user-digitalocean
       script:

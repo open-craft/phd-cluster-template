@@ -12,6 +12,11 @@ on:
         required: false
         default: "https://github.com/open-craft/phd-cluster-template.git"
         type: string
+      INSTANCE_TEMPLATE_VERSION:
+        description: "Version of the instance template to use"
+        required: false
+        default: "main"
+        type: string
       PLATFORM_NAME:
         description: 'Platform name (e.g., "My Open edX Platform")'
         required: true
@@ -141,6 +146,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PHD_STORAGE_SECRET_ACCESS_KEY }}
         run: |
           tofu init -input=false
+          tofu refresh
 
       - name: Create instance
         env:
@@ -161,6 +167,8 @@ jobs:
           PHD_STORAGE_REGION: ${{ secrets.PHD_STORAGE_REGION }}
           PHD_STORAGE_ACCESS_KEY_ID: ${{ secrets.PHD_STORAGE_ACCESS_KEY_ID }}
           PHD_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.PHD_STORAGE_SECRET_ACCESS_KEY }}
+          # OpenCraft manifests version override
+          PHD_OPENCRAFT_MANIFESTS_VERSION: ${{ inputs.INSTANCE_TEMPLATE_VERSION }}
           # Backend credentials for Terraform state access
           AWS_ACCESS_KEY_ID: ${{ secrets.PHD_STORAGE_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PHD_STORAGE_SECRET_ACCESS_KEY }}
@@ -168,6 +176,7 @@ jobs:
           phd_create_instance \
             "${{ inputs.INSTANCE_NAME }}" \
             --template-repository "${{ inputs.INSTANCE_TEMPLATE_REPOSITORY }}" \
+            --template-version "${{ inputs.INSTANCE_TEMPLATE_VERSION }}" \
             --platform-name "${{ inputs.PLATFORM_NAME }}" \
             --edx-platform-repository "${{ inputs.EDX_PLATFORM_REPOSITORY }}" \
             --edx-platform-version "${{ inputs.EDX_PLATFORM_VERSION }}" \

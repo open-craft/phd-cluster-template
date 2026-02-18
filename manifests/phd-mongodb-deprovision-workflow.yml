@@ -16,6 +16,8 @@ spec:
         value: "{{ PHD_INSTANCE_NAME }}"
       - name: database-name
         value: "{{ PHD_INSTANCE_MONGODB_DATABASE }}"
+      - name: forum-database-name
+        value: "{{ PHD_INSTANCE_MONGODB_DATABASE_FORUM }}"
       - name: username
         value: "{{ PHD_INSTANCE_MONGODB_USERNAME }}"
       - name: mongodb-provider

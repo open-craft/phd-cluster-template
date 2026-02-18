@@ -7,6 +7,9 @@ DOCKER_IMAGE_OPENEDX: "{{ cookiecutter.docker_registry }}/{{ cookiecutter.cluste
 DOCKER_IMAGE_OPENEDX_DEV: "{{ cookiecutter.docker_registry }}/{{ cookiecutter.cluster_repository_owner }}/{{ cookiecutter.cluster_repository_name }}:{{ cookiecutter.instance_slug }}-openedx-dev"
 DOCKER_REGISTRY: "{{ cookiecutter.docker_registry }}"
 DRYDOCK_INIT_JOBS: true
+DRYDOCK_INIT_JOBS_EXCLUDED:
+- mysql-job
+- mongodb-job
 DRYDOCK_REGISTRY_CREDENTIALS: '{ "auths": { "{{ cookiecutter.docker_registry }}": { "auth": "{{ cookiecutter.docker_registry_credentials }}" } } }'
 
 # Tutor configuration
@@ -18,15 +21,7 @@ TUTOR_VERSION: "{{ cookiecutter.tutor_version }}"
 PLATFORM_NAME: "{{ cookiecutter.platform_description }}"
 EDX_PLATFORM_REPOSITORY: "{{ cookiecutter.platform_repository }}"
 EDX_PLATFORM_VERSION: "{{ cookiecutter.platform_version }}"
-OPENEDX_EXTRA_PIP_REQUIREMENTS:
-  - git+https://github.com/eduNEXT/eox-tenant@v14.0.0
-  - cssselect==1.2.0
-  - h5p-xblock==0.2.17
-  - openedx-scorm-xblock==19.0.2
-  - xblock-free-text-response==4.1.0
-  - xblock-submit-and-compare==3.1.0
-  - xblock-image-explorer==3.0.2
-  - edx-sga==0.26.0
+OPENEDX_EXTRA_PIP_REQUIREMENTS: []
 
 # Ingress and HTTP configuration
 ENABLE_HTTPS: true
@@ -40,20 +35,21 @@ RUN_MYSQL: false
 MYSQL_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
 MYSQL_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
 MYSQL_PASSWORD: "{{ generate_password() }}"
-MYSQL_HOST: "{{ env('PHD_MYSQL_HOST') or 'mysql' }}"
-MYSQL_PORT: "{{ env('PHD_MYSQL_PORT') or '3306' }}"
+MYSQL_HOST: "{{ env('PHD_MYSQL_HOST', 'mysql') }}"
+MYSQL_PORT: "{{ env('PHD_MYSQL_PORT', '3306') }}"
 
 # MongoDB configuration
 RUN_MONGODB: false
 MONGODB_DATABASE: "phd-{{ cookiecutter.instance_slug }}-openedx"
 MONGODB_USERNAME: "phd-{{ cookiecutter.instance_slug }}"
 MONGODB_PASSWORD: "{{ generate_password() }}"
-MONGODB_HOST: "{{ env('PHD_MONGODB_HOST') or 'mongodb' }}"
-MONGODB_PORT: "{{ env('PHD_MONGODB_PORT') or '27017' }}"
+MONGODB_HOST: "{{ env('PHD_MONGODB_HOST', 'mongodb') }}"
+MONGODB_PORT: "{{ env('PHD_MONGODB_PORT', '27017') }}"
 MONGODB_USE_SSL: true
 MONGODB_AUTH_MECHANISM: "SCRAM-SHA-1"
-MONGODB_AUTH_SOURCE: "{{ env('PHD_MONGODB_AUTH_SOURCE') or 'admin' }}"
-MONGODB_REPLICA_SET: "{{ env('PHD_MONGODB_REPLICA_SET') or '' }}"
+MONGODB_AUTH_SOURCE: "{{ env('PHD_MONGODB_AUTH_SOURCE', 'admin') }}"
+MONGODB_REPLICA_SET: "{{ env('PHD_MONGODB_REPLICA_SET', '') }}"
+FORUM_MONGODB_DATABASE: "phd-{{ cookiecutter.instance_slug }}-forum"
 
 # Storage configuration
 STORAGE_BUCKET_NAME: "phd-{{ cookiecutter.instance_slug }}-{{ generate_password() | truncate(7, True, '', 0) }}"
@@ -65,21 +61,6 @@ STORAGE_ENDPOINT_URL: "{{ storage_endpoint_url(env('PHD_STORAGE_TYPE'), env('PHD
 PICASSO_EXTRA_COMMANDS:
   - pip install tutor-contrib-drydock
   - tutor plugins index add https://raw.githubusercontent.com/eduNEXT/tutor-plugin-indexes/teak/
-  - tutor plugins install forum mfe mfe-extensions sentry
-  - tutor plugins enable drydock forum mfe mfe-extensions sentry
-  - tutor picasso enable-themes
+  - tutor plugins install forum mfe mfe-extensions
+  - tutor plugins enable drydock forum mfe mfe-extensions
   - tutor picasso enable-private-packages
-  - tutor config save
-
-PICASSO_THEMES:
-  - name: ednx-saas-themes
-    repo: git@github.com:eduNEXT/ednx-saas-themes.git
-    version: edunext/teak.master
-
-PICASSO_THEMES_NAME:
-  - bragi
-  - css-runtime
-
-PICASSO_THEME_DIRS:
-  - /openedx/themes/ednx-saas-themes/edx-platform
-  - /openedx/themes/ednx-saas-themes/edx-platform/bragi-children

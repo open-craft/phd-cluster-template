@@ -426,6 +426,7 @@ class TestBuildInstanceConfigMongoDB:
         """
         config = {
             "MONGODB_DATABASE": "testdb",
+            "FORUM_MONGODB_DATABASE": "testdb_forum",
             "MONGODB_USERNAME": "user",
             "MONGODB_PASSWORD": "pass",
             "MONGODB_HOST": "mongo.example.com",
@@ -439,6 +440,7 @@ class TestBuildInstanceConfigMongoDB:
         result = build_instance_config("inst", config)
 
         assert result["PHD_INSTANCE_MONGODB_DATABASE"] == "testdb"
+        assert result["PHD_INSTANCE_MONGODB_DATABASE_FORUM"] == "testdb_forum"
         assert result["PHD_INSTANCE_MONGODB_USERNAME"] == "user"
         assert result["PHD_INSTANCE_MONGODB_PASSWORD"] == "pass"
         assert result["PHD_INSTANCE_MONGODB_HOST"] == "mongo.example.com"
@@ -458,7 +460,9 @@ class TestBuildInstanceConfigMongoDB:
 
         result = build_instance_config("inst", config)
 
+        assert result["PHD_INSTANCE_MONGODB_DATABASE"] == "testdb"
         assert result["PHD_INSTANCE_MONGODB_HOST"] == ""
         assert result["PHD_INSTANCE_MONGODB_PORT"] == ""
         assert result["PHD_INSTANCE_MONGODB_AUTH_SOURCE"] == ""
         assert result["PHD_INSTANCE_MONGODB_REPLICA_SET"] == ""
+        assert result["PHD_INSTANCE_MONGODB_DATABASE_FORUM"] == ""

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Update a Tutor instance config.yml with the built image reference.
 
@@ -48,7 +49,27 @@ def parse_args() -> argparse.Namespace:
 
 
 def compute_full_image(image_name: str, image_tag: str) -> str:
-    if ":" in image_name:
+    """
+    Compute the full image reference with tag.
+
+    An image is considered already tagged if:
+    - It contains '@' (digest), e.g., 'repo/image@sha256:...'
+    - The last path segment (after the last '/') contains ':', e.g., 'repo/image:tag'
+
+    This correctly handles registry ports like 'registry:5000/repo/image' which should
+    still get a tag appended.
+    """
+    # Check for digest (e.g., repo/image@sha256:...)
+    if "@" in image_name:
+        return image_name
+
+    # Check if the last segment (image name) contains a tag
+    # Split by '/' and check the last part
+    parts = image_name.split("/")
+    last_segment = parts[-1]
+
+    # If the last segment contains ':', it's already tagged
+    if ":" in last_segment:
         return image_name
 
     if not image_tag:
