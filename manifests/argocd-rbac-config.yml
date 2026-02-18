@@ -43,19 +43,11 @@ data:
 
     # Developer role: Access to applications and projects (read/write)
     p, role:developer, applications, get, *, allow
-    p, role:developer, applications, create, *, allow
-    p, role:developer, applications, update, *, allow
-    p, role:developer, applications, delete, *, allow
     p, role:developer, applications, sync, *, allow
     p, role:developer, applications, action/*, *, allow
     p, role:developer, applicationsets, get, *, allow
-    p, role:developer, applicationsets, create, *, allow
-    p, role:developer, applicationsets, update, *, allow
-    p, role:developer, applicationsets, delete, *, allow
     p, role:developer, applicationsets, action/*, *, allow
     p, role:developer, projects, get, *, allow
-    p, role:developer, projects, create, *, allow
-    p, role:developer, projects, update, *, allow
     p, role:developer, logs, get, *, allow
     p, role:developer, exec, create, *, allow
 
