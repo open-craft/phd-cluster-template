@@ -21,7 +21,7 @@ If Velero was enabled during infrastructure provisioning (Harmony option), it ca
 Typical steps:
 
 1. Verify Velero is installed: `kubectl get pods -n velero`
-2. Check schedules: `velero schedule get` (if Velero CLI is configured)
+2. Check schedules: `velero schedule get` (if [Velero CLI](https://velero.io/docs/main/velero-install/) is configured)
 3. Create or adjust schedules via Terraform/Harmony configuration or Velero CRDs
 
 Backup location and schedules are defined in the Terraform variables (e.g. `velero_schedules`). For more information, check the [Harmony documentation](https://gitlab.com/opencraft/ops/terraform-modules/-/blob/main/modules/harmony).
