@@ -215,10 +215,18 @@ class TestKubernetesClient:
         k8s_client = KubernetesClient()
         k8s_client.apply_manifest(manifest, namespace="test-ns")
 
-        # Verify kubectl apply was called
+        # Verify kubectl apply was called (with --server-side)
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args
-        assert call_args[0][0] == ["kubectl", "apply", "-f", "-", "-n", "test-ns"]
+        assert call_args[0][0] == [
+            "kubectl",
+            "apply",
+            "--server-side",
+            "-f",
+            "-",
+            "-n",
+            "test-ns",
+        ]
 
     @mock.patch("phd.kubernetes.client.RbacAuthorizationV1Api")
     @mock.patch("phd.kubernetes.client.CoreV1Api")
