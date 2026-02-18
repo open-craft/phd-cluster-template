@@ -159,13 +159,9 @@ def install_argo_workflows(cluster_config: ClusterConfig) -> None:
         ConfigurationError: If required configuration is missing
         KubernetesError: If Kubernetes operations fail
         ManifestError: If manifest operations fail
-        PasswordError: If password operations fail
     """
 
     k8s = KubernetesClient()
-
-    generated_password = not cluster_config.argo_admin_password
-    plaintext_password = resolve_plaintext_password(cluster_config.argo_admin_password)
 
     run_command_with_logging(
         logger,
@@ -180,29 +176,6 @@ def install_argo_workflows(cluster_config: ClusterConfig) -> None:
         k8s.apply_manifest_from_url,
         cluster_config.argo_workflows_install_url,
         "argo",
-    )
-
-    run_command_with_logging(
-        logger,
-        "configure Argo Workflows ingress",
-        k8s.apply_manifest_from_url,
-        f"{cluster_config.opencraft_manifests_url}/argo-workflows-ingress.yml",
-        "argo",
-        {
-            "PHD_CLUSTER_DOMAIN": cluster_config.cluster_domain,
-        },
-    )
-
-    run_command_with_logging(
-        logger,
-        "configure Argo Server admin auth",
-        k8s.apply_manifest_from_url,
-        f"{cluster_config.opencraft_manifests_url}/argo-server-auth.yml",
-        "argo",
-        {
-            "PHD_CLUSTER_DOMAIN": cluster_config.cluster_domain,
-            "PHD_ARGO_ADMIN_PASSWORD_BCRYPT": bcrypt_password(plaintext_password),
-        },
     )
 
     run_command_with_logging(

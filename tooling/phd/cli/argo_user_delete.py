@@ -12,7 +12,6 @@ from phd.utils import get_logger, log_success
 
 logger = get_logger(__name__)
 
-ARGO_NAMESPACE = "argo"
 ARGOCD_NAMESPACE = "argocd"
 
 
@@ -114,87 +113,9 @@ def _remove_argocd_user(k8s_client: KubernetesClient, username: str) -> None:
     _remove_rbac_policy(k8s_client, "argocd-rbac-cm", ARGOCD_NAMESPACE, username)
 
 
-def _remove_argo_workflows_user(k8s_client: KubernetesClient, username: str) -> None:
-    """
-    Remove Argo Workflows user from SSO secret.
-
-    Args:
-        k8s_client: Kubernetes client
-        username: Username to remove
-    """
-
-    logger.info("Removing Argo Workflows user '%s'...", username)
-
-    try:
-        run_command_with_logging(
-            logger,
-            f"remove user '{username}' from Argo Workflows SSO",
-            k8s_client.patch_secret,
-            name="argo-server-sso",
-            namespace=ARGO_NAMESPACE,
-            data={
-                f"accounts.{username}.enabled": None,
-                f"accounts.{username}.password": None,
-                f"accounts.{username}.tokens": None,
-            },
-        )
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.warning(
-            "Failed to remove user from argo-server-sso: %s (user may not exist)", e
-        )
-
-    _remove_rbac_policy(k8s_client, "argo-server-rbac-config", ARGO_NAMESPACE, username)
-
-
-def _remove_kubernetes_resources(k8s_client: KubernetesClient, username: str) -> None:
-    """
-    Remove Kubernetes resources associated with user.
-
-    Args:
-        k8s_client: Kubernetes client
-        username: Username to remove resources for
-    """
-
-    logger.info("Removing Kubernetes resources for user '%s'...", username)
-
-    resources = [
-        ("service account", k8s_client.delete_service_account, username),
-        ("token secret", k8s_client.delete_secret, f"{username}-token"),
-        ("role", k8s_client.delete_role, f"{username}-workflows"),
-        ("role binding", k8s_client.delete_role_binding, f"{username}-binding"),
-        (
-            "cluster role",
-            k8s_client.delete_cluster_role,
-            f"{username}-cluster-workflows",
-        ),
-        (
-            "cluster role binding",
-            k8s_client.delete_cluster_role_binding,
-            f"{username}-cluster-binding",
-        ),
-    ]
-
-    for resource_type, delete_func, resource_name in resources:
-        try:
-            kwargs = {"name": resource_name}
-            if "cluster" not in resource_type:
-                kwargs["namespace"] = ARGO_NAMESPACE
-
-            run_command_with_logging(
-                logger,
-                f"delete {resource_type} '{resource_name}'",
-                delete_func,
-                **kwargs,
-            )
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to delete %s: %s (may not exist)", resource_type, e)
-
-
 def delete_argo_user(username: str, force: bool = False) -> None:
     """
-    Delete an Argo user and all associated resources.
-
-    Removes user from ArgoCD, Argo Workflows, and all Kubernetes resources.
+    Delete an ArgoCD user and all associated resources.
 
     Args:
         username: Username to delete
@@ -216,15 +137,12 @@ def delete_argo_user(username: str, force: bool = False) -> None:
     k8s_client = KubernetesClient()
 
     _remove_argocd_user(k8s_client, username)
-    _remove_argo_workflows_user(k8s_client, username)
-    _remove_kubernetes_resources(k8s_client, username)
 
     log_success(logger, f"User '{username}' deletion process completed")
-    logger.warning("Restart the servers to apply all changes:")
+    logger.warning("Restart the ArgoCD server to apply all changes:")
     logger.warning(
-        "  ArgoCD: kubectl delete pod -n argocd -l app.kubernetes.io/name=argocd-server"
+        "  kubectl delete pod -n argocd -l app.kubernetes.io/name=argocd-server"
     )
-    logger.warning("  Argo Workflows: kubectl delete pod -n argo -l app=argo-server")
 
 
 def main() -> None:
@@ -233,7 +151,7 @@ def main() -> None:
     """
 
     parser = argparse.ArgumentParser(
-        description="Delete an Argo user and all associated resources"
+        description="Delete an ArgoCD user and all associated resources"
     )
     parser.add_argument("username", help="Username to delete")
     parser.add_argument(

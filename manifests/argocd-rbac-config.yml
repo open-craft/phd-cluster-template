@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  policy.default: role:readonly
+  policy.csv: |
+    # Role definitions
+    # Admin role: Full access to all applications and projects
+    p, role:admin, applications, *, *, allow
+    p, role:admin, applicationsets, *, *, allow
+    p, role:admin, clusters, get, *, allow
+    p, role:admin, clusters, create, *, allow
+    p, role:admin, clusters, update, *, allow
+    p, role:admin, clusters, delete, *, allow
+    p, role:admin, repositories, get, *, allow
+    p, role:admin, repositories, create, *, allow
+    p, role:admin, repositories, update, *, allow
+    p, role:admin, repositories, delete, *, allow
+    p, role:admin, certificates, get, *, allow
+    p, role:admin, certificates, create, *, allow
+    p, role:admin, certificates, update, *, allow
+    p, role:admin, certificates, delete, *, allow
+    p, role:admin, accounts, get, *, allow
+    p, role:admin, accounts, create, *, allow
+    p, role:admin, accounts, update, *, allow
+    p, role:admin, accounts, delete, *, allow
+    p, role:admin, gpgkeys, get, *, allow
+    p, role:admin, gpgkeys, create, *, allow
+    p, role:admin, gpgkeys, update, *, allow
+    p, role:admin, gpgkeys, delete, *, allow
+    p, role:admin, logs, get, *, allow
+    p, role:admin, exec, create, *, allow
+    p, role:admin, projects, get, *, allow
+    p, role:admin, projects, create, *, allow
+    p, role:admin, projects, update, *, allow
+    p, role:admin, projects, delete, *, allow
+
+    # Developer role: Access to applications and projects (read/write)
+    p, role:developer, applications, get, *, allow
+    p, role:developer, applications, sync, *, allow
+    p, role:developer, applications, action/*, *, allow
+    p, role:developer, applicationsets, get, *, allow
+    p, role:developer, applicationsets, action/*, *, allow
+    p, role:developer, projects, get, *, allow
+    p, role:developer, logs, get, *, allow
+    p, role:developer, exec, create, *, allow
+
+    # Readonly role: Read-only access to applications and projects
+    p, role:readonly, applications, get, *, allow
+    p, role:readonly, applications, sync, *, allow
+    p, role:readonly, applicationsets, get, *, allow
+    p, role:readonly, projects, get, *, allow
+    p, role:readonly, logs, get, *, allow
