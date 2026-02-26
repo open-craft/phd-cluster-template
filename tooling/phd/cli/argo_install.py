@@ -205,11 +205,6 @@ type: kubernetes.io/service-account-token""",
         scan_existing_namespaces=True,
     )
 
-    if generated_password:
-        logger.warning(
-            "Generated Argo admin password (store securely): %s", plaintext_password
-        )
-
     log_success(logger, "Argo Workflows installed successfully")
 
 

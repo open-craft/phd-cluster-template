@@ -402,7 +402,7 @@ class TestSanitizeUsername:
     """
 
     def test_basic_email(self):
-        assert sanitize_username("User@Example.com") == "user-cluster.domain"
+        assert sanitize_username("User@Example.com") == "user-example.com"
 
     def test_invalid_chars_collapsed(self):
         assert sanitize_username("a@@@b___c..d--e") == "a-b-c.d-e"
