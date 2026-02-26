@@ -32,8 +32,6 @@ jobs:
             mkdocs-material-
       - name: Deploy to GitHub Pages
         run: |
-          cd docs
           uv venv
-          uv pip install -r requirements.txt
-          cd ..
-          uv run mkdocs gh-deploy --force
+          uv pip install -r docs/requirements.txt
+          .venv/bin/mkdocs gh-deploy --force
