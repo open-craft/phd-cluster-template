@@ -429,7 +429,7 @@ class TestBuildInstanceConfigMongoDB:
             "FORUM_MONGODB_DATABASE": "testdb_forum",
             "MONGODB_USERNAME": "user",
             "MONGODB_PASSWORD": "pass",
-            "MONGODB_HOST": "mongo.example.com",
+            "MONGODB_HOST": "mongo.cluster.domain",
             "MONGODB_PORT": "27017",
             "MONGODB_USE_SSL": True,
             "MONGODB_AUTH_MECHANISM": "SCRAM-SHA-1",
@@ -443,7 +443,7 @@ class TestBuildInstanceConfigMongoDB:
         assert result["PHD_INSTANCE_MONGODB_DATABASE_FORUM"] == "testdb_forum"
         assert result["PHD_INSTANCE_MONGODB_USERNAME"] == "user"
         assert result["PHD_INSTANCE_MONGODB_PASSWORD"] == "pass"
-        assert result["PHD_INSTANCE_MONGODB_HOST"] == "mongo.example.com"
+        assert result["PHD_INSTANCE_MONGODB_HOST"] == "mongo.cluster.domain"
         assert result["PHD_INSTANCE_MONGODB_PORT"] == "27017"
         assert result["PHD_INSTANCE_MONGODB_AUTH_SOURCE"] == "admin"
         assert result["PHD_INSTANCE_MONGODB_REPLICA_SET"] == "rs0"

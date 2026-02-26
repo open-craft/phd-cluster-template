@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 # Set required environment variable before importing anything from phd
-os.environ.setdefault("PHD_CLUSTER_DOMAIN", "test.example.com")
+os.environ.setdefault("PHD_CLUSTER_DOMAIN", "test.cluster.domain")
 
 from phd.exceptions import ConfigurationError
 from phd.kubeconfig import (
@@ -313,7 +313,7 @@ class TestGetKubeconfigFromEnv:
         kubeconfig = """apiVersion: v1
 clusters:
 - cluster:
-    server: https://example.com
+    server: https://cluster.domain
   name: test-cluster
 kind: Config"""
         monkeypatch.setenv("KUBECONFIG_CONTENT", kubeconfig)

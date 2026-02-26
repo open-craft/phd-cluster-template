@@ -47,7 +47,7 @@ def create_cluster(  # pylint: disable=too-many-branches,too-many-arguments,too-
 
     Args:
         cluster_name: Name of the cluster (e.g., "PHD Production Cluster")
-        cluster_domain: Domain for the cluster (e.g., "cluster.example.com")
+        cluster_domain: Domain for the cluster (e.g., "cluster.cluster.domain")
         environment: Environment name (default: "production")
         short_description: Short description of the cluster
         cloud_provider: Cloud provider (aws or digitalocean)
@@ -163,7 +163,7 @@ def main() -> None:
         "cluster_name", help="Name of the cluster (e.g., 'PHD Production Cluster')"
     )
     parser.add_argument(
-        "cluster_domain", help="Domain for the cluster (e.g., 'cluster.example.com')"
+        "cluster_domain", help="Domain for the cluster (e.g., 'cluster.cluster.domain')"
     )
     parser.add_argument(
         "--environment",

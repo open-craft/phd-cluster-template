@@ -1,0 +1,72 @@
+site_name: Launchpad Documentation
+site_url: https://picasso-harmony-drydock.opencraft.com
+site_dir: public
+nav:
+  - Introduction: index.md
+  - Infrastructure:
+    - Overview: infrastructure/index.md
+    - Provisioning: infrastructure/provisioning.md
+    - Cluster Repository Setup: infrastructure/cluster-repository-setup.md
+    - Deprovisioning: infrastructure/deprovisioning.md
+    - Custom Resources: infrastructure/custom-resources.md
+  - Cluster:
+    - Overview: cluster/index.md
+    - Authentication: cluster/authentication.md
+    - Configuration: cluster/configuration.md
+    - Upgrade: cluster/upgrade.md
+    - Backup: cluster/backup.md
+    - Restore: cluster/restore.md
+    - Monitoring: cluster/monitoring.md
+  - Instances:
+    - Overview: instances/index.md
+    - Provisioning: instances/provisioning.md
+    - Deprovisioning: instances/deprovisioning.md
+    - Configuration: instances/configuration.md
+    - Docker Images: instances/docker-images.md
+    - Auto-scaling: instances/auto-scaling.md
+    - Tracking Logs: instances/tracking-logs.md
+    - Logging: instances/logging.md
+    - Monitoring: instances/monitoring.md
+    - Debugging: instances/debugging.md
+  - User Guides:
+    - Overview: user-guides/index.md
+    - Using AWS WAF and ALB: user-guides/using-aws-waf-and-alb.md
+    - Instance Maintenance Mode: user-guides/instance-maintenance-mode.md
+    - Setting Up Cron Jobs: user-guides/setting-up-cron-jobs.md
+    - Pull Request Sandboxes: user-guides/pull-request-sandboxes.md
+    - Multi-Domain Setup: user-guides/multi-domain-setup.md
+    - Migrating Instances from Grove: user-guides/migrating-instances-from-grove.md
+theme:
+  name: material
+  logo: images/opencraft-logo.svg
+  custom_dir: docs/theme_overrides
+repo_url: https://github.com/open-craft/phd-cluster-template
+edit_uri: tree/main/docs/
+extra_css:
+  - css/opencraft-branding.css
+  - https://unpkg.com/mermaid@8/dist/mermaid.css
+extra_javascript:
+  - https://unpkg.com/mermaid@8/dist/mermaid.min.js
+plugins:
+  - search
+  - glightbox
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+  - sane_lists: {}
+  - codehilite:
+      use_pygments: false
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - def_list
+  - pymdownx.tabbed:
+      alternate_style: true

@@ -31,7 +31,7 @@ class ClusterConfig(PHDBaseSettings):
     cluster_domain: str = Field(
         # pylint: disable=unnecessary-lambda
         default_factory=lambda: ClusterConfig._load_cluster_domain_from_context(),
-        description="Cluster domain (e.g., example.com)",
+        description="Cluster domain (e.g., cluster.domain)",
     )
 
     # Environment

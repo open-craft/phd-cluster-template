@@ -72,7 +72,7 @@ class TestKubernetesClient:
         Test successful retrieval of manifest from URL.
         """
 
-        url = "https://example.com/manifest.yaml"
+        url = "https://cluster.domain/manifest.yaml"
         manifest_content = "apiVersion: v1\nkind: ConfigMap"
         mock_response = mock.Mock()
         mock_response.text = manifest_content
@@ -107,7 +107,7 @@ class TestKubernetesClient:
         Test handling of HTTP errors when retrieving manifest from URL.
         """
 
-        url = "https://example.com/manifest.yaml"
+        url = "https://cluster.domain/manifest.yaml"
         mock_get.side_effect = requests.exceptions.HTTPError("404 Not Found")
 
         k8s_client = KubernetesClient()
@@ -386,7 +386,7 @@ class TestKubernetesClient:
         mock_api_client_instance = mock.Mock()
         mock_api_client_class.return_value = mock_api_client_instance
 
-        url = "https://example.com/manifest.yaml"
+        url = "https://cluster.domain/manifest.yaml"
         manifest_content = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: test-cm"
         mock_response = mock.Mock()
         mock_response.text = manifest_content
@@ -437,7 +437,7 @@ class TestKubernetesClient:
         mock_api_client_instance = mock.Mock()
         mock_api_client_class.return_value = mock_api_client_instance
 
-        url = "https://example.com/manifest.yaml"
+        url = "https://cluster.domain/manifest.yaml"
         manifest_content = (
             "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: {{ NAME }}"
         )
@@ -490,7 +490,7 @@ class TestKubernetesClient:
         Test handling of fetch failure when applying manifest from URL.
         """
 
-        url = "https://example.com/manifest.yaml"
+        url = "https://cluster.domain/manifest.yaml"
         mock_get.side_effect = requests.exceptions.RequestException("Network error")
 
         k8s_client = KubernetesClient()

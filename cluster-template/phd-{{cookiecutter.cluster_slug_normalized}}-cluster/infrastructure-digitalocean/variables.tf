@@ -71,7 +71,7 @@ variable "kubernetes_resource_quotas" {
 
 variable "lets_encrypt_notification_inbox" {
   type        = string
-  default     = "dev@example.com"
+  default     = "dev@cluster.domain"
   description = "The email address to receive notifications from Let's Encrypt."
 }
 

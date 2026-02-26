@@ -8,7 +8,7 @@ The PHD tooling consists of several command-line utilities that work together to
 
 - **Create and manage clusters**: Bootstrap new Kubernetes clusters with ArgoCD and Argo Workflows installed
 - **Deploy Open edX instances**: Automate the creation of isolated Open edX instances with proper RBAC
-- **Manage Argo users**: Create, update, and delete ArgoCD/Argo Workflows users with appropriate permissions
+- **Manage ArgoCD users**: Create, update, and delete ArgoCD users with appropriate permissions
 - **Handle infrastructure**: Support for AWS and DigitalOcean cloud providers
 
 ## Installation
@@ -52,7 +52,7 @@ uvx --from ./phd-cluster-template/tooling command
 Creates a new cluster configuration using cookiecutter templates.
 
 ```bash
-phd_create_cluster "My Production Cluster" "cluster.example.com" \
+phd_create_cluster "My Production Cluster" "cluster.cluster.domain" \
   --environment production \
   --cloud-provider aws \
   --output-dir ./clusters
@@ -112,7 +112,7 @@ phd_install_argo --workflows-only
 ```
 
 #### `phd_create_argo_user`
-Creates a new ArgoCD/Argo Workflows user with specified permissions.
+Creates a new ArgoCD user with specified permissions.
 
 ```bash
 phd_create_argo_user john.doe \
@@ -121,7 +121,7 @@ phd_create_argo_user john.doe \
 ```
 
 #### `phd_update_argo_user`
-Updates an existing ArgoCD/Argo Workflows user.
+Updates an existing ArgoCD user.
 
 ```bash
 phd_update_argo_user john.doe \
@@ -130,7 +130,7 @@ phd_update_argo_user john.doe \
 ```
 
 #### `phd_delete_argo_user`
-Deletes an ArgoCD/Argo Workflows user.
+Deletes an ArgoCD user.
 
 ```bash
 phd_delete_argo_user john.doe

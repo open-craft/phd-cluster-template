@@ -4,6 +4,8 @@ fail_fast: false
 default_stages: [pre-commit, pre-push]
 default_install_hook_types: [pre-commit]
 
+exclude: ^public/.*
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -24,7 +26,7 @@ repos:
       # Check JSON/YAML
       - id: check-yaml
         args: [--allow-multiple-documents]
-        exclude: ^cluster-template/phd-\{\{cookiecutter\.cluster_slug_normalized\}\}-cluster/.github/workflows/(build|build-all|create-instance|delete-instance).yml$
+        exclude: ^cluster-template/phd-\{\{cookiecutter\.cluster_slug_normalized\}\}-cluster/.github/workflows/(build|build-all|create-instance|delete-instance).yml$|^mkdocs\.yaml$
       - id: check-json
       - id: pretty-format-json
         args: [--no-sort-keys]
