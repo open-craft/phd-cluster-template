@@ -110,10 +110,10 @@ phd_install_argo --help
 **Using PHD CLI**:
 ```bash
 # Set required environment variable
-export PHD_CLUSTER_DOMAIN="example.com"
+export PHD_CLUSTER_DOMAIN="cluster.domain"
 
 # Create cluster configuration
-phd_create_cluster "PHD Production Cluster" "prod.example.com"
+phd_create_cluster "PHD Production Cluster" "prod.cluster.domain"
 ```
 
 **Using cookiecutter directly**:
@@ -233,7 +233,7 @@ phd_install_argo --workflows-only      # Install Argo Workflows only
 
 **User Management**:
 ```bash
-# Create Argo user with access to both ArgoCD and Argo Workflows
+# Create ArgoCD user
 phd_create_argo_user <username> [--role admin|developer|readonly] [--password PASSWORD]
 
 # Update user permissions
@@ -309,7 +309,7 @@ For other registries (e.g., AWS ECR, Google GCR, Azure ACR):
 # For GCR, use a service account JSON key
 # Format: echo -n "username:token" | base64
 
-export PHD_DOCKER_REGISTRY="your-registry.example.com"
+export PHD_DOCKER_REGISTRY="your-registry.cluster.domain"
 export PHD_DOCKER_REGISTRY_CREDENTIALS="base64_encoded_credentials"
 ```
 
@@ -444,7 +444,7 @@ The system supports multiple MongoDB providers with automatic detection:
 
 **DigitalOcean-managed MongoDB**:
 ```bash
-export PHD_MONGODB_HOST="mongodb.example.com"
+export PHD_MONGODB_HOST="mongodb.cluster.domain"
 export PHD_MONGODB_PORT="27017"
 export PHD_MONGODB_ADMIN_USER="admin"
 export PHD_MONGODB_ADMIN_PASSWORD="secure_password"
@@ -593,7 +593,7 @@ For GitHub Actions, configure:
   cat ~/.kube/config | base64 -w 0  # Linux
   cat ~/.kube/config | base64       # macOS
   ```
-- `PHD_CLUSTER_DOMAIN`: Your cluster's domain name (e.g., `prod.example.com`)
+- `PHD_CLUSTER_DOMAIN`: Your cluster's domain name (e.g., `prod.cluster.domain`)
 
 **Note**: The PHD CLI will automatically handle kubeconfig setup, so no need to manually configure kubectl in most cases.
 
@@ -621,7 +621,7 @@ For GitHub Actions, configure:
 
 **Docker Registry** (Required for private image pulls):
 - `PHD_DOCKER_REGISTRY`: Docker registry hostname (default: `ghcr.io`)
-  - Examples: `ghcr.io`, `docker.io`, `registry.example.com`
+  - Examples: `ghcr.io`, `docker.io`, `registry.cluster.domain`
 - `PHD_DOCKER_REGISTRY_CREDENTIALS`: Base64-encoded credentials in format `username:token`
   - Generate with: `echo -n "username:token" | base64`
   - For GitHub Container Registry: Use a GitHub Personal Access Token (PAT) with `read:packages` permission

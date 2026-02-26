@@ -86,7 +86,7 @@ kubectl get all -n argo  # Should return "not found"
 
 Remove any remaining resources that might prevent infrastructure destruction:
 
-**Check for Persistent Resources**:
+We are listing the PVs and PVCs in order to keep a record what was used by the cluster. In case the cluster deletion goes sideways, we have easier job identifying dangling resources.
 
 ```bash
 # List persistent volumes
@@ -100,6 +100,22 @@ kubectl get storageclass
 
 # List custom resource definitions
 kubectl get crd
+```
+
+**Delete selective resources** (replace `<name>` and `<namespace>` with actual values):
+
+```bash
+# Delete a persistent volume claim (typically required before deleting its bound PV)
+kubectl delete pvc <pvc-name> -n <namespace>
+
+# Delete a persistent volume
+kubectl delete pv <pv-name>
+
+# Delete a storage class (only if not in use)
+kubectl delete storageclass <storageclass-name>
+
+# Delete a custom resource definition (removes the CRD and all instances of that resource)
+kubectl delete crd <crd-name>
 ```
 
 **Remove Custom Resources** (if needed):

@@ -3,7 +3,7 @@
   "cluster_name": "PHD Production Cluster",
   "cluster_slug": "{{ cookiecutter.cluster_name.lower().replace(' ', '-') }}",
   "cluster_slug_normalized": "{{ cookiecutter.cluster_slug|replace('_', '-')|replace('phd-', '')|replace('-cluster', '')|replace(cookiecutter.environment.lower(), '')|trim('-') }}",
-  "cluster_domain": "{{ cookiecutter.cluster_slug.lower().replace('_', '-') + '.example.com' }}",
+  "cluster_domain": "{{ cookiecutter.cluster_slug.lower().replace('_', '-') + '.cluster.domain' }}",
   "short_description": "Kubernetes cluster to host Open edX instances",
   "cloud_provider": [
     "aws",

@@ -25,11 +25,10 @@ Users for ArgoCD are created with the Launchpad CLI. See [Creating ArgoCD Users]
 - `phd_update_argo_user` -  Update role or password
 - `phd_delete_argo_user` -  Remove a user
 
-After creating or updating users, restart the server pods so changes take effect:
+After creating or updating users, restart the ArgoCD server so changes take effect:
 
 ```bash
 kubectl delete pod -n argocd -l app.kubernetes.io/name=argocd-server
-kubectl delete pod -n argo -l app=argo-server
 ```
 
 ## Web UI Access

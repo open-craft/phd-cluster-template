@@ -29,9 +29,9 @@ class TestClusterConfig:
         Test ClusterConfig with required cluster_domain field.
         """
 
-        config = ClusterConfig(cluster_domain="example.com")
+        config = ClusterConfig(cluster_domain="cluster.domain")
 
-        assert config.cluster_domain == "example.com"
+        assert config.cluster_domain == "cluster.domain"
         assert config.argocd_version == "stable"
         assert config.argo_workflows_version == "stable"
         assert config.opencraft_manifests_version == "main"
@@ -43,14 +43,14 @@ class TestClusterConfig:
         """
 
         config = ClusterConfig(
-            cluster_domain="test.example.com",
+            cluster_domain="test.cluster.domain",
             argocd_version="v2.8.0",
             argo_workflows_version="v3.4.0",
             opencraft_manifests_version="develop",
             argo_admin_password="custom_password",
         )
 
-        assert config.cluster_domain == "test.example.com"
+        assert config.cluster_domain == "test.cluster.domain"
         assert config.argocd_version == "v2.8.0"
         assert config.argo_workflows_version == "v3.4.0"
         assert config.opencraft_manifests_version == "develop"
@@ -62,7 +62,7 @@ class TestClusterConfig:
         """
 
         config = ClusterConfig(
-            cluster_domain="example.com", opencraft_manifests_version="v1.0.0"
+            cluster_domain="cluster.domain", opencraft_manifests_version="v1.0.0"
         )
 
         expected_url = "https://raw.githubusercontent.com/open-craft/phd-cluster-template/v1.0.0/manifests"
@@ -73,7 +73,7 @@ class TestClusterConfig:
         Test the argocd_install_url property.
         """
 
-        config = ClusterConfig(cluster_domain="example.com", argocd_version="v2.8.0")
+        config = ClusterConfig(cluster_domain="cluster.domain", argocd_version="v2.8.0")
 
         expected_url = "https://raw.githubusercontent.com/argoproj/argo-cd/v2.8.0/manifests/install.yaml"
         assert config.argocd_install_url == expected_url
@@ -84,7 +84,7 @@ class TestClusterConfig:
         """
 
         config = ClusterConfig(
-            cluster_domain="example.com", argo_workflows_version="v3.4.0"
+            cluster_domain="cluster.domain", argo_workflows_version="v3.4.0"
         )
 
         expected_url = "https://raw.githubusercontent.com/argoproj/argo-workflows/v3.4.0/manifests/install.yaml"
@@ -95,10 +95,10 @@ class TestClusterConfig:
         Test that ClusterConfig is frozen (immutable).
         """
 
-        config = ClusterConfig(cluster_domain="example.com")
+        config = ClusterConfig(cluster_domain="cluster.domain")
 
         with pytest.raises(ValidationError, match="frozen"):
-            config.cluster_domain = "new.example.com"
+            config.cluster_domain = "new.cluster.domain"
 
     def test_cluster_config_extra_forbidden(self):
         """
@@ -106,7 +106,7 @@ class TestClusterConfig:
         """
 
         with pytest.raises(ValidationError, match="extra"):
-            ClusterConfig(cluster_domain="example.com", extra_field="value")
+            ClusterConfig(cluster_domain="cluster.domain", extra_field="value")
 
     def test_cluster_config_env_prefix(self):
         """
@@ -116,13 +116,13 @@ class TestClusterConfig:
         with mock.patch.dict(
             os.environ,
             {
-                "PHD_CLUSTER_DOMAIN": "env.example.com",
+                "PHD_CLUSTER_DOMAIN": "env.cluster.domain",
                 "PHD_ARGOCD_VERSION": "v2.9.0",
             },
         ):
             config = ClusterConfig()
 
-            assert config.cluster_domain == "env.example.com"
+            assert config.cluster_domain == "env.cluster.domain"
             assert config.argocd_version == "v2.9.0"
 
 
@@ -227,7 +227,7 @@ class TestConfig:
     Test suite for main Config class.
     """
 
-    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.example.com"})
+    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.cluster.domain"})
     def test_config_creation_with_env(self):
         """
         Test Config creation with environment variables.
@@ -237,9 +237,9 @@ class TestConfig:
 
         assert config.log_level == "INFO"
         assert "phd.log" in config.log_file
-        assert config.cluster.cluster_domain == "test.example.com"
+        assert config.cluster.cluster_domain == "test.cluster.domain"
 
-    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.example.com"})
+    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.cluster.domain"})
     def test_config_default_values(self):
         """
         Test Config default values.
@@ -256,7 +256,7 @@ class TestConfig:
         {
             "PHD_LOG_LEVEL": "DEBUG",
             "PHD_LOG_FILE": "custom.log",
-            "PHD_CLUSTER_DOMAIN": "test.example.com",
+            "PHD_CLUSTER_DOMAIN": "test.cluster.domain",
         },
     )
     def test_config_custom_log_values(self):
@@ -269,7 +269,7 @@ class TestConfig:
         assert config.log_level == "DEBUG"
         assert config.log_file == "custom.log"
 
-    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.example.com"})
+    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.cluster.domain"})
     def test_config_nested_configs(self):
         """
         Test that Config contains all nested configuration layers.
@@ -283,7 +283,7 @@ class TestConfig:
         assert isinstance(config.storage, StorageConfig)
         assert isinstance(config.picasso, PicassoConfig)
 
-    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.example.com"})
+    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.cluster.domain"})
     def test_config_frozen(self):
         """
         Test that Config is frozen.
@@ -300,7 +300,7 @@ class TestGetConfig:
     Test suite for get_config function.
     """
 
-    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.example.com"})
+    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.cluster.domain"})
     def test_get_config_returns_config(self):
         """
         Test that get_config returns a Config instance.
@@ -314,7 +314,7 @@ class TestGetConfig:
 
         assert isinstance(config, Config)
 
-    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.example.com"})
+    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.cluster.domain"})
     def test_get_config_singleton(self):
         """
         Test that get_config returns the same instance (singleton pattern).
@@ -329,7 +329,7 @@ class TestGetConfig:
 
         assert config1 is config2
 
-    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.example.com"})
+    @mock.patch.dict(os.environ, {"PHD_CLUSTER_DOMAIN": "test.cluster.domain"})
     def test_get_config_lazy_initialization(self):
         """
         Test that get_config uses lazy initialization.

@@ -13,6 +13,7 @@ The provisioning process consists of three main phases:
 Before provisioning infrastructure, ensure you have:
 
 - **Launchpad CLI**: Installed and configured (see [Quick Start](../index.md#quick-start))
+- **Cookiecutter**: Installed for cluster template generation (`pip install cookiecutter`)
 - **Cloud Provider Access**: Valid credentials for AWS or DigitalOcean
 - **Terraform/OpenTofu**: Installed (OpenTofu is recommended)
 - **kubectl**: Installed
@@ -24,11 +25,24 @@ Before provisioning infrastructure, ensure you have:
 
 The first step is to generate the cluster configuration using the `phd_create_cluster` command. This creates a directory structure with Terraform modules, GitHub Actions workflows, and configuration files.
 
-**Using Launchpad CLI**:
+**Install the CLI** (if not already installed):
+
+```bash
+# Install uv (if needed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install PHD CLI as a tool (persistent)
+uv tool install git+https://github.com/open-craft/phd-cluster-template.git#subdirectory=tooling
+
+# Or run without installing (one-off)
+uvx --from git+https://github.com/open-craft/phd-cluster-template.git#subdirectory=tooling phd_create_cluster --help
+```
+
+**Create cluster configuration**:
 
 ```bash
 # Create cluster with custom options
-phd_create_cluster "Launchpad Production Cluster" "example.com" \
+phd_create_cluster "Launchpad Production Cluster" "cluster.domain" \
   --environment production \
   --cloud-provider aws \
   --cloud-region us-east-1 \
@@ -39,7 +53,7 @@ phd_create_cluster "Launchpad Production Cluster" "example.com" \
 **Command Options**:
 
 - `cluster_name`: Display name for the cluster
-- `cluster_domain`: Domain name for the cluster (e.g., `example.com`)
+- `cluster_domain`: Domain name for the cluster (e.g., `cluster.domain`)
 - `--environment`: Environment name (default: `production`)
 - `--cloud-provider`: Cloud provider - `aws` or `digitalocean`
 - `--cloud-region`: Region for the cloud provider
@@ -58,6 +72,8 @@ phd_create_cluster "Launchpad Production Cluster" "example.com" \
 - GitHub Actions workflows for building images and managing instances
 - Instance template directory structure
 - Configuration files and documentation
+
+After pushing the repository to GitHub, configure [GitHub Actions secrets and ArgoCD](cluster-repository-setup.md) before creating instances.
 
 ### Step 2: Deploy Infrastructure
 
@@ -122,7 +138,7 @@ Install the GitOps tools required for managing Open edX instances.
 **Set Required Environment Variable**:
 
 ```bash
-export LAUNCHPAD_CLUSTER_DOMAIN="example.com"
+export LAUNCHPAD_CLUSTER_DOMAIN="cluster.domain"
 export LAUNCHPAD_DOCKER_REGISTRY_CREDENTIALS="base64 encoded docker registry credentials"
 ```
 
@@ -133,7 +149,7 @@ export LAUNCHPAD_DOCKER_REGISTRY_CREDENTIALS="base64 encoded docker registry cre
 phd_install_argo
 ```
 
-**Install Selectively**:
+**Or, Install Selectively**:
 
 ```bash
 # Install only ArgoCD
@@ -164,21 +180,20 @@ phd_install_argo --workflows-only
 
 After installation, you can access:
 
-- **ArgoCD**: `https://argocd.example.com`
+- **ArgoCD**: `https://argocd.cluster.domain`
 - **Argo Workflows**: `http://localhost:2746` (after `kubectl port-forward svc/argo-server 2746:2746 -n argo`)
 
 Use the admin password (displayed during installation or set via `LAUNCHPAD_ARGO_ADMIN_PASSWORD`) to log in.
 
-### Step 5: Configure ArgoCD Projects
+### Step 5: Configure ArgoCD Projects and Repository
 
-ArgoCD requires repository configuration the default project we use.
+ArgoCD must be able to clone the cluster repository to sync applications. Configure the repository connection and project before creating instances.
 
-1. Log into the ArgoCD web UI
-2. Navigate to Settings → Repositories
-3. Create a new repository
-4. Configure repository access and resource restrictions as needed (using git+ssh and GitHub deploy private key)
+See [Cluster Repository Setup](cluster-repository-setup.md#argocd-project-and-repository-connection) for detailed instructions on:
 
-This step is manual and must be completed before creating instances.
+- Connecting the repository via SSH (GitHub deploy key)
+- Configuring the ArgoCD project
+- Verifying the connection
 
 ### Step 6: Verify Installation
 
@@ -201,7 +216,7 @@ kubectl get ingress -n argo
 
 ## Creating ArgoCD Users
 
-After installing ArgoCD and Argo Workflows, you can create users with access to both systems using the `phd_create_argo_user` command.
+After installing ArgoCD and Argo Workflows, you can create ArgoCD users using the `phd_create_argo_user` command.
 
 ### Basic Usage
 
@@ -209,7 +224,7 @@ After installing ArgoCD and Argo Workflows, you can create users with access to 
 
 ```bash
 # Set required environment variable
-export LAUNCHPAD_CLUSTER_DOMAIN="example.com"
+export LAUNCHPAD_CLUSTER_DOMAIN="cluster.domain"
 
 # Create user (will prompt for password)
 phd_create_argo_user john.doe
@@ -236,22 +251,19 @@ phd_create_argo_user viewer.user \
 
 ### User Roles
 
-The system supports three user roles with different permission levels:
+The system supports three user roles with different ArgoCD permission levels:
 
 **Admin Role**:
-- **ArgoCD**: Full access to all applications and projects
-- **Argo Workflows**: Full cluster-wide access to all workflow resources
-- **Permissions**: Create, read, update, delete all workflows, templates, and cron workflows
+- Full access to all applications and projects
+- Create, read, update, delete all applications and projects
 
 **Developer Role**:
-- **ArgoCD**: Access to assigned applications and projects
-- **Argo Workflows**: Full cluster-wide access to workflow resources
-- **Permissions**: Create, read, update, delete workflows, templates, and cron workflows
+- Access to assigned applications and projects
+- Create, read, update, delete assigned applications and projects
 
 **Readonly Role**:
-- **ArgoCD**: Read-only access to applications and projects
-- **Argo Workflows**: Read-only access to workflow resources
-- **Permissions**: View workflows, templates, and cron workflows only
+- Read-only access to applications and projects
+- View applications and projects only
 
 ### What Gets Created
 
@@ -259,20 +271,13 @@ When you create a user, the following resources are created:
 
 1. **ArgoCD Account**: User account configured in ArgoCD with login capability
 2. **ArgoCD RBAC**: Role-based access control policies for ArgoCD
-3. **Argo Workflows RBAC**: Role-based access control for Argo Workflows
-4. **Kubernetes Service Account**: Service account for API access
-5. **API Token**: Bearer token for programmatic access to Argo Workflows API
 
 ### After User Creation
 
-After creating a user, you need to restart the ArgoCD server pod to apply the login changes:
+After creating a user, restart the ArgoCD server pod to apply the login changes:
 
 ```bash
-# Restart ArgoCD server to apply user login changes
 kubectl delete pod -n argocd -l app.kubernetes.io/name=argocd-server
-
-# Restart Argo Workflows server to apply UI token changes
-kubectl delete pod -n argo -l app=argo-server
 ```
 
 ### Managing Users
@@ -299,18 +304,16 @@ phd_delete_argo_user john.doe --force
 
 ### User Access
 
-Users can access the systems via:
+Users can access ArgoCD via:
 
-- **ArgoCD Web UI**: `https://argocd.example.com` (or your cluster domain)
-- **Argo Workflows**: `http://localhost:2746` (after `kubectl port-forward svc/argo-server 2746:2746 -n argo`)
-- **Argo Workflows API**: Using the bearer token provided during user creation
+- **ArgoCD Web UI**: `https://argocd.cluster.domain` (or your cluster domain)
 
 ## Configuration
 
 ### Environment Variables
 
 **Required**:
-- `LAUNCHPAD_CLUSTER_DOMAIN`: Cluster domain name (e.g., `example.com`)
+- `LAUNCHPAD_CLUSTER_DOMAIN`: Cluster domain name (e.g., `cluster.domain`)
 
 **Optional**:
 - `LAUNCHPAD_ARGO_ADMIN_PASSWORD`: Admin password for ArgoCD and Argo Workflows (auto-generated if not set)
@@ -336,7 +339,7 @@ The infrastructure modules require various variables. See the `variables.tf` fil
 
 **Template Generation Fails**:
 
-- Verify cookiecutter is installed: `pip install cookiecutter`
+- Ensure cookiecutter is installed (see [Prerequisites](#prerequisites))
 - Check that the template repository is accessible
 - Review error messages for missing required variables
 

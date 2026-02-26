@@ -6,7 +6,7 @@ This page summarizes cluster-wide configuration for the Launchpad stack.
 
 Required for most Launchpad commands:
 
-- **`LAUNCHPAD_CLUSTER_DOMAIN`** -  Cluster domain (e.g. `prod.example.com`)
+- **`LAUNCHPAD_CLUSTER_DOMAIN`** -  Cluster domain (e.g. `prod.cluster.domain`)
 
 Optional, but highly recommended:
 

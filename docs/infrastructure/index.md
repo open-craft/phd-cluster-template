@@ -102,6 +102,7 @@ This architecture provides a scalable, maintainable solution for hosting multipl
 
 - [Introduction](../index.md) -  Documentation home
 - [Provisioning](provisioning.md) -  Cluster and ArgoCD provisioning steps
+- [Cluster Repository Setup](cluster-repository-setup.md) -  GitHub secrets, workflows, and ArgoCD repository connection
 - [Deprovisioning](deprovisioning.md) -  Removing infrastructure
 - [Custom Resources](custom-resources.md) -  Workflow templates and ArgoCD resources
 
