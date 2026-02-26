@@ -86,7 +86,7 @@ kubectl get all -n argo  # Should return "not found"
 
 Remove any remaining resources that might prevent infrastructure destruction:
 
-We are listing the PVs and PVCs in order to keep a record what was used by the cluster. In case the cluster deletion goes sideways, we have easier job identifying dangling resources.
+We are listing the PVs and PVCs in order to keep a record of what was used by the cluster. In case the cluster deletion goes sideways, we have easier job identifying dangling resources.
 
 ```bash
 # List persistent volumes

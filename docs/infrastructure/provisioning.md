@@ -316,6 +316,7 @@ Users can access ArgoCD via:
 - `LAUNCHPAD_CLUSTER_DOMAIN`: Cluster domain name (e.g., `cluster.domain`)
 
 **Optional**:
+
 - `LAUNCHPAD_ARGO_ADMIN_PASSWORD`: Admin password for ArgoCD and Argo Workflows (auto-generated if not set)
 - `LAUNCHPAD_ARGOCD_VERSION`: ArgoCD version (default: `stable`)
 - `LAUNCHPAD_ARGO_WORKFLOWS_VERSION`: Argo Workflows version (default: `stable`)
