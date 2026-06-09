@@ -112,7 +112,7 @@ jobs:
         run: |
           echo "$TERRAFORM_SECRETS" > secrets.auto.tfvars
 
-      - name: Initialize Terraform
+      - name: Initialize Terraform and Render Kubeconfig
         working-directory: "infrastructure"
         env:
           TF_CLI_ARGS: "-no-color"
@@ -121,6 +121,8 @@ jobs:
         run: |
           tofu init -input=false
           tofu refresh
+          mkdir -p ~/.kube
+          tofu output -raw kubeconfig_content > ~/.kube/config
 
       - name: Delete instance
         env:
