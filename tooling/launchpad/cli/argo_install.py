@@ -85,39 +85,34 @@ def _configure_registry_pull_secrets(
             )
 
 
-def _apply_argo_workflows_template(url: str, namespace: str) -> None:
+def _apply_argo_workflows_template(url: str) -> None:
     """
-    Apply an Argo Workflows template using kubectl.
+    Apply an Argo Workflows ClusterWorkflowTemplate using kubectl.
 
     Args:
         url: URL of the template manifest
-        namespace: Namespace to apply to
 
     Raises:
         KubernetesError: If applying the template fails
     """
     try:
+        logger.debug("Applying template from URL: %s", url)
         result = subprocess.run(
-            ["kubectl", "apply", "-f", url, "-n", namespace],
+            ["kubectl", "apply", "--server-side", "--force-conflicts", "-f", url],
             capture_output=True,
             text=True,
             check=False,
         )
 
         if result.returncode != 0:
-            if not ("already exists" in result.stderr or "409" in result.stderr):
-                raise KubernetesError(
-                    f"Failed to apply Argo Workflows template: {result.stderr}"
-                )
+            raise KubernetesError(f"Failed to apply Argo Workflows template: {result.stderr}")
 
-            logger.warning("Template already exists, skipping creation")
+        logger.info("Template applied: %s", result.stdout.strip())
 
-    except subprocess.CalledProcessError as e:
-        raise KubernetesError(f"Failed to apply Argo Workflows template: {e}") from e
+    except KubernetesError:
+        raise
     except Exception as e:
-        raise KubernetesError(
-            f"Unexpected error applying Argo Workflows template: {e}"
-        ) from e
+        raise KubernetesError(f"Unexpected error applying Argo Workflows template: {e}") from e
 
 
 def _install_argo_workflows_templates(cluster_config: ClusterConfig) -> None:
@@ -145,7 +140,6 @@ def _install_argo_workflows_templates(cluster_config: ClusterConfig) -> None:
             f"install {template_name} template",
             _apply_argo_workflows_template,
             f"{manifests_url}/{template}",
-            "argo",
         )
 
     log_success(logger, "Argo Workflows templates installed successfully")
@@ -166,6 +160,27 @@ def install_argo_workflows(cluster_config: ClusterConfig) -> None:
     """
 
     k8s = KubernetesClient()
+
+    run_command_with_logging(
+        logger,
+        "create gp3 storage class",
+        k8s.apply_manifest,
+        """apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  fsType: ext4
+  encrypted: "true"
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+"""
+    )
 
     run_command_with_logging(
         logger,
@@ -195,6 +210,15 @@ metadata:
     kubernetes.io/service-account.name: workflow-executor
 type: kubernetes.io/service-account-token""",
         "argo",
+    )
+
+    run_command_with_logging(
+        logger,
+        "disable Argo Workflows UI authentication (port-forward access only)",
+        k8s.patch_deployment_args,
+        "argo-server",
+        "argo",
+        ["server", "--auth-mode=server"],
     )
 
     _install_argo_workflows_templates(cluster_config)

@@ -323,6 +323,59 @@ class KubernetesClient:
                 f"Failed to patch config map '{name}' in namespace '{namespace}': {e}"
             ) from e
 
+    def patch_deployment_args(
+        self,
+        name: str,
+        namespace: str,
+        args: list[str],
+        container_name: str | None = None,
+    ) -> None:
+        """
+        Patch the args of a container in a Deployment.
+
+        Args:
+            name: Deployment name
+            namespace: Namespace containing the deployment
+            args: New args list for the container
+            container_name: Container to patch (defaults to first container)
+
+        Raises:
+            KubernetesError: If patching fails
+        """
+
+        self._logger.debug(
+            "Patching deployment '%s' in namespace '%s'", name, namespace
+        )
+
+        try:
+            deployment = self._apps_v1.read_namespaced_deployment(
+                name=name, namespace=namespace
+            )
+
+            containers = deployment.spec.template.spec.containers
+            if container_name:
+                target = next(
+                    (c for c in containers if c.name == container_name), None
+                )
+                if not target:
+                    raise KubernetesError(
+                        f"Container '{container_name}' not found in deployment '{name}'"
+                    )
+            else:
+                target = containers[0]
+
+            target.args = args
+
+            self._apps_v1.patch_namespaced_deployment(
+                name=name, namespace=namespace, body=deployment
+            )
+        except KubernetesError:
+            raise
+        except Exception as e:
+            raise KubernetesError(
+                f"Failed to patch deployment '{name}' in namespace '{namespace}': {e}"
+            ) from e
+
     def ensure_role_has_pods_exec(self, name: str, namespace: str) -> None:
         """
         Ensure a namespaced Role has a rule allowing create on pods/exec.
