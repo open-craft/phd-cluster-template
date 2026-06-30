@@ -167,8 +167,15 @@ def setup_kubeconfig(terraform_dir: Optional[Path] = None) -> None:
     """
     kubeconfig_content = None
 
-    # Try Terraform/OpenTofu first
-    kubeconfig_content = get_kubeconfig_from_terraform(terraform_dir)
+    # Try local .kubeconfig file first
+    local_kubeconfig = Path.cwd() / ".kubeconfig"
+    if local_kubeconfig.exists():
+        _get_logger().info("Using local .kubeconfig file at %s", local_kubeconfig)
+        kubeconfig_content = local_kubeconfig.read_text()
+
+    # Try Terraform/OpenTofu next
+    if not kubeconfig_content:
+        kubeconfig_content = get_kubeconfig_from_terraform(terraform_dir)
 
     # Fall back to environment variable
     if not kubeconfig_content:
