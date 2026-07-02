@@ -37,7 +37,7 @@ on:
 jobs:
   build:
     name: Build ${{ matrix.service }} service
-    uses: open-craft/launchpad-cluster-template/.github/workflows/build.yml@main
+    uses: open-craft/launchpad-cluster-template/.github/workflows/build.yml@kaustav/test_upstream_picasso
     strategy:
       matrix:
         service: ["openedx", "mfe"]
