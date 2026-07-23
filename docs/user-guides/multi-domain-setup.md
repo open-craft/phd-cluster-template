@@ -21,6 +21,7 @@ individual tenants, including settings that are not site-configuration aware. Th
 limitations of the basic site-configuration approach.
 
 !!! warning "Important"
+
     `eox-tenant` also proxies the Site Configuration model, so it fetches configuration
     values from tenant settings. Tenant settings inherit the base settings, so common settings can
     be placed under `GROVE_LMS_ENV` or `GROVE_CMS_ENV`, depending on the environment.
@@ -36,14 +37,18 @@ GROVE_ADDITIONAL_DOMAINS:
 - domain: example.net
   external_key: example.net
   proxy: lms:8000
+  mfe_domain: apps.example.net
   site_configuration:
     PLATFORM_NAME: example.net
     SITE_NAME: example.net
 - domain: studio.example.net
   external_key: example.net
+  mfe_domain: apps.example.net
   proxy: cms:8000
   site_configuration:
     PLATFORM_NAME: example.net Studio
+- domain: apps.example.net
+  mfe_proxy: mfe:8002
 - domain: university.example.com
   external_key: university.example.com
   proxy: lms:8000
@@ -54,9 +59,22 @@ GROVE_ADDITIONAL_DOMAINS:
 
 The `external_key` is a unique identifier for a tenant configuration that links it to one
 or more routes. In the example, `example.net` (external_key `example.net`) is linked to
-LMS (`example.net`) and Studio (`studio.example.net`). Likewise, `university.example.com`
-(external_key `university.example.com`) is linked to LMS (`university.example.com`) and Studio
-(`studio.university.example.com`).
+LMS (`example.net`) and Studio (`studio.example.net`).
+
+Likewise, `university.example.com` (external_key `university.example.com`) is linked to LMS
+(`university.example.com`) and Studio (`studio.university.example.com`).
+
+The `mfe_domain` field on an LMS or Studio entry points that tenant to a separate domain that
+hosts the Micro Frontend applications (e.g. `apps.example.net`).
+
+The `proxy` field on an LMS or Studio entry routes the tenant's domain to the corresponding
+Open edX service: `lms:8000` for LMS domains and `cms:8000` for CMS domains. It determines
+which service handles requests for that domain.
+
+The `mfe_proxy` field on an MFE domain entry (e.g. `apps.example.net`) routes traffic to the
+MFE service at `mfe:8002`. It pairs with `mfe_domain`: when an LMS or Studio entry sets
+`mfe_domain: apps.example.net`, the ingress expects a matching entry for `apps.example.net`
+that provides `mfe_proxy: mfe:8002`.
 
 Settings can be scoped per environment. For instance, `PLATFORM_NAME` differs for the `example.net`
 LMS and Studio tenants above. Common tenant settings can be placed under `GROVE_LMS_ENV` or
