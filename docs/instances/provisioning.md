@@ -33,8 +33,8 @@ export LAUNCHPAD_DOCKER_REGISTRY_CREDENTIALS="base64-encoded user:password"
 ```bash
 export LAUNCHPAD_MYSQL_HOST="mysql.cluster.domain"
 export LAUNCHPAD_MYSQL_PORT="3306"
-export LAUNCHPAD_MYSQL_ADMIN_USER="root"
-export LAUNCHPAD_MYSQL_ADMIN_PASSWORD="secure_password"
+export LAUNCHPAD_MYSQL_ROOT_USER="root"
+export LAUNCHPAD_MYSQL_ROOT_PASSWORD="secure_password"
 ```
 
 **MongoDB Database** (DigitalOcean):
