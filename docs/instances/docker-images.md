@@ -8,13 +8,55 @@ Open edX instances use container images for the LMS/CMS (openedx), MFEs, and oth
 - Image names and tags are typically set in the instance `config.yml` (e.g. `DOCKER_IMAGE_OPENEDX`, `MFE_DOCKER_IMAGE`) and automatically updated by Picasso after a build.
 - Builds are **not** automatic on config change; they are triggered manually or by your automation (e.g. “Build Image” workflow in the cluster repo or the PR sandbox automation).
 
-## Building Images
+## Building Images (preferred)
 
 1. In the cluster repository, use the “Build Image” workflow.
 2. Provide inputs such as instance name, service (`openedx`, `mfe`), branch, and Picasso version.
 3. The workflow runs the Picasso build, pushes the image to the configured registry, and updates the image tag in the instance `config.yml`.
 
 Ensure `LAUNCHPAD_DOCKER_REGISTRY_CREDENTIALS` is set in the environment so the cluster can pull private images.
+
+## Building Images Locally
+
+Although the preferred way is to build images using the GitHub Actions executors, for debugging purposes or local testing, sometimes local image building is necessary.
+
+Behind the scenes, the GitHub Actions will execute the following:
+
+1. Read `config.yml` / optional dynamic tag
+2. `pip install tutor tutor-contrib-picasso`
+3. `tutor picasso run-extra-commands` (commands listed in `PICASSO_EXTRA_COMMANDS` in the `config.yml`)
+4. `tutor images build $SERVICE --no-cache`
+5. `tutor images push $SERVICE`
+
+The GitHub Actions-specific glue is GHCR login via GITHUB_TOKEN, dynamic-tag Python scripts, silent-error log scan, disk cleanup, BuildKit limits, and the config commit.
+
+To build a service image locally, execute the following commands from within the cluster repo:
+
+```shell
+export INSTANCE_NAME=<instance-name>
+export TUTOR_VERSION=<tutor-version>
+export TUTOR_ROOT="./instances/$INSTANCE_NAME"
+
+# ... activate a virtualenv ...
+
+# Install dependencies
+pip install "git+https://github.com/overhangio/tutor.git@$TUTOR_VERSION"
+pip install "git+https://github.com/open-craft/tutor-contrib-picasso@kaustav/fix_tutor_main_compatibility"
+
+# ... pip install every requirements listed in `PICASSO_EXTRA_COMMANDS` ...
+
+# Enable tutor plugins and save the config
+tutor plugins enable picasso
+tutor config save
+
+# Run the extra commands defined in config.yml `PICASSO_EXTRA_COMMANDS`
+tutor picasso run-extra-commands
+
+# Build the image
+tutor images build --no-cache openedx   # or mfe
+```
+
+_Do not push an image to the GHCR registry as that can cause confusion._
 
 ## Image Sources
 
