@@ -68,8 +68,8 @@ jobs:
 
       - name: Configure git user
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          git config user.name "${{ github.actor }} via GitHub Actions"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
 
       - name: Install Tutor and its dependencies from the version specified in the config.yml
         run: |
@@ -97,6 +97,14 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: update tutor env and config for ${{ inputs.INSTANCE_NAME }}"
+          git commit -m "$(cat <<EOF
+          chore: update tutor env and config for ${{ inputs.INSTANCE_NAME }}
+
+          Automated commit.
+          Workflow: ${{ github.workflow }}
+          Triggered by: ${{ github.actor }}
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          )"
           git pull origin "${{ inputs.STRAIN_REPOSITORY_BRANCH }}" --rebase
           git push
