@@ -8,7 +8,7 @@ Open edX instances use container images for the LMS/CMS (openedx), MFEs, and oth
 - Image names and tags are typically set in the instance `config.yml` (e.g. `DOCKER_IMAGE_OPENEDX`, `MFE_DOCKER_IMAGE`) and automatically updated by Picasso after a build.
 - Builds are **not** automatic on config change; they are triggered manually or by your automation (e.g. “Build Image” workflow in the cluster repo or the PR sandbox automation).
 
-## Building Images (preferred)
+## Building Images in CI (preferred)
 
 1. In the cluster repository, use the “Build Image” workflow.
 2. Provide inputs such as instance name, service (`openedx`, `mfe`), branch, and Picasso version.
@@ -33,9 +33,8 @@ The GitHub Actions-specific glue is GHCR login via GITHUB_TOKEN, dynamic-tag Pyt
 To build a service image locally, execute the following commands from within the cluster repo:
 
 ```shell
-export INSTANCE_NAME=<instance-name>
-export TUTOR_VERSION=<tutor-version>
-export TUTOR_ROOT="./instances/$INSTANCE_NAME"
+export TUTOR_ROOT="./instances/<instance-name>"
+export TUTOR_VERSION=$(grep 'TUTOR_VERSION' "$TUTOR_ROOT/config.yml" | awk '{print $2}' | tr -d '"')
 
 # ... activate a virtualenv ...
 
