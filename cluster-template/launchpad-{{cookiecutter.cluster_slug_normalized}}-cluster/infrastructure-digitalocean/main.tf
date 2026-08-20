@@ -48,8 +48,8 @@ module "kubernetes_cluster" {
   kubernetes_version = var.kubernetes_version
 
   worker_node_size      = local.kubernetes_worker_node_size
-  worker_node_min_count = local.kubernetes_cluster_min_node_count
-  worker_node_max_count = local.kubernetes_cluster_max_node_count
+  min_worker_node_count = local.kubernetes_cluster_min_node_count
+  max_worker_node_count = local.kubernetes_cluster_max_node_count
 }
 
 module "mysql_database" {

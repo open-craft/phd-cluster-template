@@ -64,9 +64,9 @@ module "kubernetes_cluster" {
   cluster_name       = var.kubernetes_cluster_name
   kubernetes_version = var.kubernetes_version
 
-  worker_node_size       = local.kubernetes_worker_node_size
-  cluster_min_node_count = local.kubernetes_cluster_min_node_count
-  cluster_max_node_count = local.kubernetes_cluster_max_node_count
+  worker_node_size      = local.kubernetes_worker_node_size
+  min_worker_node_count = local.kubernetes_cluster_min_node_count
+  max_worker_node_count = local.kubernetes_cluster_max_node_count
 }
 
 module "kubernetes_cert_manager" {
