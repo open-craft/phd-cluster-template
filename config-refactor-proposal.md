@@ -40,8 +40,26 @@ Fine-grained (one mixin per field, not grouped by topic) so that "compose only w
 - **Mixins grouped by topic** (e.g. a single `DockerRegistryFields` with `docker_registry` and `docker_registry_credentials` together). A future command that only needs one of the two fields would still end up dragging in the other — the same problem as inheriting all of `ClusterConfig`, at a smaller scale.
 - **A configuration file (`launchpad.yaml`)** as an additional source. Today there would be nothing real to migrate to that file (env vars remain the actual source of truth), so adding it without a concrete use case doesn't demonstrate anything in this POC.
 
+## Checklist against the original issue
+
+The issue listed 4 improvement ideas. Status after this POC:
+
+1. **More comprehensive `--help`** (defaults, env vars, docs link): Done.
+2. **Consolidate configuration** (e.g. pick a single source: all args, all env vars, or all a toml/yaml file): Partial. The *code* is consolidated into one settings class with clear precedence, but the command still accepts two sources (CLI + env var), not a single exclusive one as the issue's example suggests.
+3. **Stop using env vars altogether** — Not done. `LAUNCHPAD_*` still works exactly as before, kept for backward compatibility.
+4. **Validate config with something like Pydantic** — Done. Eager validation before touching the cluster.
+
+Items 2 and 3 are related: picking a single configuration source (dropping env vars, or dropping CLI args, or moving to a config file) is a bigger decision than this POC's scope. 
+
 ## What does NOT change
 
 - The `LAUNCHPAD_*` env vars keep working exactly the same, none are deprecated.
 - Same external behavior of the command (same flags, same defaults).
 - No other command was touched for now.
+
+## Next Steps
+
+- If this proposal is accepted, it can be implemented in the other commands without any regression.
+- Hold a discussion to make a decision regarding the points that still need to be resolved:
+    - Consolidate configuration (sources)
+    - Stop using env vars altogether
