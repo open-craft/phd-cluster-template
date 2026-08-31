@@ -3,10 +3,12 @@
 ## Configure the new instance
 
 - set the DNS record TTL to 300s
-- create a new instance in the new cluster using the "create instance" GitHub workflow (or `launchpad_create_instance` locally)
-- make sure the new instance's `aplication.yml` has `spec.syncPolicy.automated.enabled` set to `false`
+- copy the old instance `config.yml` and `application.yml` into `instances/<name>/` on the new cluster repo
+- make sure the new instance's `application.yml` has `spec.syncPolicy.automated.enabled` set to `false`
+- create the instance using the "create instance" GitHub workflow (or `launchpad_create_instance` locally):
+    - **Same instance name**: create reuses the copied files as-is, including database credentials and bucket name
+    - **New name**: use `--from-instance <old-name>` (or copy the files first). Extra Tutor/plugin settings are kept; identity fields and credentials are rewritten. Pointing at old databases/storage remains a later manual step (see below)
 - create any necessary infrastructure resources for the new instance (used by plugins)
-- ensure the old instance configuration (`config.yml`) is replicated for the new instance
 - configure theming and branding for the new instance
 - build the new instance's images using the "build all images" GitHub workflow
 - deploy the new instance using ArgoCD and wait for it to be ready (~20 minutes for the first deployment)
