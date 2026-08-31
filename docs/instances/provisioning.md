@@ -71,7 +71,23 @@ Use `spaces` for DigitalOcean Spaces (`S3_HOST={region}.digitaloceanspaces.com`)
 
 ### Provisioning Process
 
-The provisioning process is automatically executed when creating a new instance using the `launchpad_create_instance` command or the GitHub Actions workflow (recommended). The process follows these steps:
+The provisioning process is automatically executed when creating a new instance using the `launchpad_create_instance` command or the GitHub Actions workflow (recommended).
+
+### Existing configuration
+
+`launchpad_create_instance` reuses or clones instance files instead of failing when `instances/<name>/` already exists:
+
+- **Retry / same-name migration**: if `instances/<name>/config.yml` already belongs to this instance (`K8S_NAMESPACE` or `TUTOR_APP_NAME` matches the instance slug), generation is skipped. Passwords and the S3 bucket name are not regenerated. You do not need to delete the instance directory to re-run create after a failure.
+- **Based on another instance**: copy `config.yml` and `application.yml` from an existing instance, or pass `--from-instance <name>`. Extra keys (plugins, theming, Tutor extras) are kept. Identity and credentials are rewritten so the new instance does not share databases, bucket, namespace, or hosts.
+- **Fresh create**: if there is no dest `config.yml`, cookiecutter generates a new instance directory as before.
+
+Rewritten identity fields include Docker image tags, `K8S_NAMESPACE` / `TUTOR_APP_NAME`, LMS/CMS hosts, MySQL and MongoDB names/users/passwords/hosts, and S3 bucket/region/credentials. `application.yml` is copied from the source and patched (`metadata.name`, labels, `spec.source.path` / `repoURL` / `targetRevision`, `spec.destination.namespace`); custom `syncPolicy` is preserved.
+
+`--from-instance` is refused when dest config already matches this instance, so a retry or same-name migration is not overwritten.
+
+Failed provision workflows are deleted and re-applied on retry so Argo actually re-runs them.
+
+The process then follows these steps:
 
 #### 1. Namespace and RBAC Setup
 
@@ -153,9 +169,8 @@ kubectl logs -n <instance-name> workflow/<workflow-name>
 
 If provisioning partially succeeds (some workflows succeed, others fail):
 
-1. **Clean Up**: Delete any partially created resources
-2. **Check Dependencies**: Ensure all required services (databases, storage) are available
-3. **Retry**: Re-run the instance creation process, which will attempt to provision all resources again
+1. **Check Dependencies**: Ensure all required services (databases, storage) are available
+2. **Retry**: Re-run `launchpad_create_instance` without deleting the instance config. Existing matching config is reused; failed provision workflows are deleted and re-run.
 
 ### Getting Help
 

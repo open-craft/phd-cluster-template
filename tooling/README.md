@@ -81,12 +81,23 @@ launchpad_create_instance my-instance \
   --tutor-version "v20.0.1"
 ```
 
+If `instances/my-instance/config.yml` already belongs to this instance, generation is skipped and the existing files are reused (retries do not require deleting the config).
+
+To create an instance based on another instance's config:
+
+```bash
+launchpad_create_instance new-instance --from-instance my-instance
+```
+
+That copies `config.yml` and `application.yml`, then rewrites identity and credentials (namespace, hosts, database names/passwords, bucket) while keeping plugins, theming, and other extra keys. You can also copy those files into `instances/new-instance/` yourself.
+
 **Options:**
 - `--template-repository`: Git URL of the instance template repository
 - `--platform-name`: Display name for the platform
 - `--edx-platform-repository`: Git URL of the edx-platform repository
 - `--edx-platform-version`: Version/branch of edx-platform to use
 - `--tutor-version`: Version of Tutor to use
+- `--from-instance`: Clone config from an existing instance, then rewrite identity and credentials
 
 #### `launchpad_delete_instance`
 Deletes an Open edX instance and cleans up all associated resources.
